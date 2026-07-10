@@ -22,9 +22,11 @@ open Package.swift  # 在 Xcode 中打开开发
 ```
 
 ## 使用流程（两步）
+
 <img width="600" height="446" alt="image" src="https://github.com/user-attachments/assets/b9c6e794-4558-4def-b59a-d9543463c813" />
 
 **第一步 · 选择弹幕源**：粘贴 B 站链接（支持 BV / av / 分 P `?p=` / b23.tv 短链）回车加载，或直接点历史记录里的一行继续看（自动恢复上次进度）。
+
 <img width="600" height="485" alt="image" src="https://github.com/user-attachments/assets/9cde85ec-f2b7-4b28-9d4f-278c74d5d3cd" />
 
 **第二步 · 同步播放**（加载成功后自动进入）：
