@@ -1,6 +1,8 @@
 # 弹来弹去 (DanLaiDanQu)
 
 macOS 桌面弹幕外挂层：输入 Bilibili 视频链接，把 B 站弹幕以透明置顶悬浮层的形式覆盖在任意播放器（YouTube / Infuse / IINA / QuickTime…）上方。不播放、不下载视频，只做弹幕获取、渲染、时间轴校准和显示控制。
+<img width="1512" height="949" alt="Snipaste_2026-07-10_12-25-23" src="https://github.com/user-attachments/assets/d643f154-9f3b-45e3-a5ba-a16b91ebd41f" />
+
 
 ## 构建与运行
 
@@ -20,8 +22,10 @@ open Package.swift  # 在 Xcode 中打开开发
 ```
 
 ## 使用流程（两步）
+<img width="600" height="446" alt="image" src="https://github.com/user-attachments/assets/b9c6e794-4558-4def-b59a-d9543463c813" />
 
 **第一步 · 选择弹幕源**：粘贴 B 站链接（支持 BV / av / 分 P `?p=` / b23.tv 短链）回车加载，或直接点历史记录里的一行继续看（自动恢复上次进度）。
+<img width="600" height="485" alt="image" src="https://github.com/user-attachments/assets/9cde85ec-f2b7-4b28-9d4f-278c74d5d3cd" />
 
 **第二步 · 同步播放**（加载成功后自动进入）：
 1. 点「打开弹幕层」（或 ⌘⇧H），把弹幕层调到覆盖视频画面的位置
