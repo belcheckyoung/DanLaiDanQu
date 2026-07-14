@@ -75,6 +75,11 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
 
         linkField.placeholderString = "https://www.bilibili.com/video/BV..."
         linkField.font = .systemFont(ofSize: 13)
+        linkField.usesSingleLineMode = true
+        linkField.maximumNumberOfLines = 1
+        linkField.lineBreakMode = .byClipping
+        linkField.cell?.wraps = false
+        linkField.cell?.isScrollable = true
 
         titleLabel.font = .boldSystemFont(ofSize: 14)
         titleLabel.maximumNumberOfLines = 2

@@ -6,7 +6,7 @@ on:
       version:
         description: Windows version without the "windows-v" prefix
         required: true
-        default: 0.2.2
+        default: 0.2.3
   push:
     tags:
       - "windows-v*"
@@ -44,7 +44,7 @@ jobs:
             $version = $env:GITHUB_REF_NAME -replace '^windows-v', ''
           } else {
             $version = "${{ inputs.version }}"
-            if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.2.2" }
+            if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.2.3" }
           }
           "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
@@ -108,8 +108,9 @@ jobs:
           - 时间轴改为整数秒；视频超过 1 小时后自动显示时、分、秒
           - 修复切换剧集后进度条仍停留在上一集位置的问题
           - 点击“换个视频”时自动保存进度、暂停播放并关闭弹幕层
+          - 链接输入框改为单行横向滚动，长链接不再换行向上挤压
 
-          macOS 版本请使用 v0.3.5 Release。
+          macOS 版本请使用 v0.3.6 Release。
           "@
           gh release create $env:GITHUB_REF_NAME $asset `
             --repo $env:GITHUB_REPOSITORY `

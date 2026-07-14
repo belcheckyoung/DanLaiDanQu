@@ -31,7 +31,7 @@
                 </Border>
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="弹来弹去" FontSize="21" FontWeight="Bold" />
-                    <TextBlock Text="Bilibili 弹幕悬浮层 · Windows v0.2.2" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+                    <TextBlock Text="Bilibili 弹幕悬浮层 · Windows v0.2.3" Foreground="{StaticResource MutedBrush}" FontSize="11" />
                 </StackPanel>
                 <Button Grid.Column="2" Content="⚙ 设置" Click="SettingsButton_Click" VerticalAlignment="Center" Margin="0" />
             </Grid>
@@ -51,6 +51,8 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="LinkBox" Grid.Column="0"
                                          ToolTip="粘贴 Bilibili 视频链接、BV 号、av 号或 b23.tv 短链"
+                                         AcceptsReturn="False" TextWrapping="NoWrap"
+                                         HorizontalScrollBarVisibility="Hidden" VerticalContentAlignment="Center"
                                          KeyDown="LinkBox_KeyDown" />
                                 <Button x:Name="LoadButton" Grid.Column="1" Content="加载弹幕" Style="{StaticResource PrimaryButton}"
                                         Click="LoadButton_Click" Margin="10,0,0,0" />
