@@ -4,7 +4,7 @@ macOS / Windows 桌面弹幕外挂层：输入 Bilibili 视频链接，把 B 站
 <img width="1512" height="949" alt="Snipaste_2026-07-10_12-25-23" src="https://github.com/user-attachments/assets/d643f154-9f3b-45e3-a5ba-a16b91ebd41f" />
 
 
-## 构建与运行
+## mac 版本
 
 要求：macOS 26 (Tahoe)+，Xcode 26+。界面采用系统原生 Liquid Glass 设计（`NSGlassEffectView` 卡片、`.glass` 按钮、磨砂窗口背景）。
 
