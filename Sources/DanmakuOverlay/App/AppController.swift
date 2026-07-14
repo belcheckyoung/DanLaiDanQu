@@ -13,6 +13,7 @@ final class AppController {
     let clock: PlaybackClock
     let hotkeys = HotkeyManager()
     private let settings = SettingsStore.shared
+    private var loadGeneration = 0
 
     var onStateChange: (() -> Void)?   // 主窗口刷新回调
 
@@ -28,49 +29,66 @@ final class AppController {
     // MARK: - 加载流程
 
     func loadLink(_ input: String) async throws {
+        let generation = await beginContentChange()
         var text = input
         if BiliLink.isShortLink(text) {
             text = try await BilibiliClient.shared.resolveShortLink(text)
         }
+        try await ensureCurrentLoad(generation)
         guard let link = BiliLink.parse(text) else { throw BiliError.invalidLink }
 
         let info = try await BilibiliClient.shared.fetchVideoInfo(link: link)
+        try await ensureCurrentLoad(generation)
         guard !info.pages.isEmpty else { throw BiliError.parseFailed }
 
         var pageNum = 1
         if case .bvid(_, let p) = link { pageNum = p }
         if case .avid(_, let p) = link { pageNum = p }
         let page = info.pages.first { $0.page == pageNum } ?? info.pages[0]
-
-        await MainActor.run {
-            self.videoInfo = info
-            self.currentPage = page
-            self.onStateChange?()
-        }
-        try await loadDanmaku(page: page, forceRefresh: false)
+        let list = try await fetchDanmaku(page: page, forceRefresh: false)
+        try await ensureCurrentLoad(generation)
+        await commitLoaded(info: info, page: page, list: list)
     }
 
     func selectPage(_ page: VideoPage) async throws {
-        await MainActor.run {
-            self.currentPage = page
-            self.onStateChange?()
-        }
-        try await loadDanmaku(page: page, forceRefresh: false)
+        guard let info = videoInfo else { throw BiliError.parseFailed }
+        let generation = await beginContentChange()
+        let list = try await fetchDanmaku(page: page, forceRefresh: false)
+        try await ensureCurrentLoad(generation)
+        await commitLoaded(info: info, page: page, list: list)
     }
 
-    func loadDanmaku(page: VideoPage, forceRefresh: Bool) async throws {
-        let list: [Danmaku]
+    private func fetchDanmaku(page: VideoPage, forceRefresh: Bool) async throws -> [Danmaku] {
         if !forceRefresh, let cached = Database.shared.loadDanmakuCache(cid: page.cid) {
-            list = cached
-        } else {
-            list = try await BilibiliClient.shared.fetchDanmaku(cid: page.cid)
-            Database.shared.saveDanmakuCache(cid: page.cid, list: list)
+            return cached
         }
+
+        let list = try await BilibiliClient.shared.fetchDanmaku(cid: page.cid)
+        Database.shared.saveDanmakuCache(cid: page.cid, list: list)
+        return list
+    }
+
+    private func beginContentChange() async -> Int {
         await MainActor.run {
+            self.loadGeneration += 1
+            self.cancelCountdown()
+            self.saveSyncProfile()
+            self.clock.pause()
+            return self.loadGeneration
+        }
+    }
+
+    private func ensureCurrentLoad(_ generation: Int) async throws {
+        let isCurrent = await MainActor.run { self.loadGeneration == generation }
+        if !isCurrent { throw CancellationError() }
+    }
+
+    private func commitLoaded(info: VideoInfo, page: VideoPage, list: [Danmaku]) async {
+        await MainActor.run {
+            self.videoInfo = info
+            self.currentPage = page
             self.rawDanmaku = list
-            if let info = self.videoInfo {
-                Database.shared.recordVideo(info: info, page: page)
-            }
+            Database.shared.recordVideo(info: info, page: page)
             self.applyFilters()
             self.restoreSyncProfile()
             self.onStateChange?()
@@ -80,15 +98,32 @@ final class AppController {
     /// 导入本地 XML 弹幕（兜底方案，B 站接口不可用时仍能工作）
     func importXML(from url: URL) throws {
         let list = try DanmakuParser.parseXMLFile(at: url)
+        loadGeneration += 1
+        cancelCountdown()
+        saveSyncProfile()
+        clock.pause()
+        let cid = Self.localCID(for: url)
+        let duration = Int(ceil(list.last?.time ?? 0))
         rawDanmaku = list
-        videoInfo = VideoInfo(bvid: "本地文件", aid: 0,
+        videoInfo = VideoInfo(bvid: "local-\(abs(cid))", aid: 0,
                               title: url.deletingPathExtension().lastPathComponent,
-                              owner: "本地导入", duration: 0,
-                              pages: [VideoPage(cid: 0, page: 1, title: "本地弹幕", duration: 0)],
+                              owner: "本地导入", duration: duration,
+                              pages: [VideoPage(cid: cid, page: 1, title: "本地弹幕", duration: duration)],
                               danmakuCount: list.count)
         currentPage = videoInfo?.pages.first
         applyFilters()
+        restoreSyncProfile()
         onStateChange?()
+    }
+
+    private static func localCID(for url: URL) -> Int64 {
+        var hash: UInt64 = 1_469_598_103_934_665_603
+        for byte in url.standardizedFileURL.path.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        let positive = max(hash & 0x7FFF_FFFF_FFFF_FFFF, 1)
+        return -Int64(positive)
     }
 
     private func applyFilters() {
@@ -215,6 +250,7 @@ final class AppController {
     private func restoreSyncProfile() {
         guard let page = currentPage else { return }
         let profile = Database.shared.loadSyncProfile(cid: page.cid)
+        clock.pause()
         clock.rate = profile?.rate ?? 1.0
         // 钳制到时长内：曾保存过超出片尾的位置会导致时间轴停在结尾之后，弹幕永不出现
         var offset = max(profile?.offset ?? 0, 0)

@@ -57,9 +57,9 @@ public static class DanmakuParser
                     weight));
             }
         }
-        catch (XmlException)
+        catch (XmlException exception)
         {
-            return [];
+            throw new InvalidDataException("弹幕 XML 格式无效", exception);
         }
 
         return result.OrderBy(item => item.Time).ToArray();

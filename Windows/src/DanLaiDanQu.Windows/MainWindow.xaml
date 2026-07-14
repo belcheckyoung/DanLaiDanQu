@@ -40,12 +40,13 @@
         <Grid Grid.Row="1">
             <ScrollViewer x:Name="MainPageScroll" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="24,20,24,24">
-                    <Border Style="{StaticResource CardStyle}">
+                    <Border x:Name="SourceCard" Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="第一步 · 选择弹幕源" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="LinkBox" Grid.Column="0"
@@ -53,6 +54,7 @@
                                          KeyDown="LinkBox_KeyDown" />
                                 <Button x:Name="LoadButton" Grid.Column="1" Content="加载弹幕" Style="{StaticResource PrimaryButton}"
                                         Click="LoadButton_Click" Margin="10,0,0,0" />
+                                <Button Grid.Column="2" Content="导入 XML" Click="ImportXmlButton_Click" Margin="8,0,0,0" />
                             </Grid>
                             <TextBlock x:Name="SourceStatusText" Text="粘贴 Bilibili 视频链接（BV / av / b23.tv）"
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0" />
@@ -62,14 +64,27 @@
                     <Border x:Name="HistoryCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="最近观看 · 选择后继续" />
-                            <ComboBox x:Name="HistoryCombo" DisplayMemberPath="DisplayTitle"
-                                      SelectionChanged="HistoryCombo_SelectionChanged" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="HistoryCombo" DisplayMemberPath="DisplayTitle"
+                                          SelectionChanged="HistoryCombo_SelectionChanged" />
+                                <Button Grid.Column="1" Content="删除所选" Click="DeleteHistoryButton_Click" Margin="8,0,0,0" />
+                                <Button Grid.Column="2" Content="清空记录" Click="ClearHistoryButton_Click" Margin="0" />
+                            </Grid>
                         </StackPanel>
                     </Border>
 
                     <Border x:Name="VideoCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="正在播放" />
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="正在播放" Margin="0" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Content="← 换个视频" Click="BackToSourceButton_Click" Margin="0" />
+                            </Grid>
                             <TextBlock x:Name="VideoTitleText" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock x:Name="VideoMetaText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,6,0,0" />
                             <ComboBox x:Name="PageCombo" DisplayMemberPath="DisplayTitle" Margin="0,12,0,0"
@@ -113,7 +128,19 @@
                                            Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="12,0,0,0" />
                             </Grid>
 
-                            <CheckBox x:Name="DelayedStartCheck" Content="播放前倒计时 5 秒" Margin="0,2,0,12" />
+                            <WrapPanel Margin="0,2,0,12">
+                                <CheckBox x:Name="DelayedStartCheck" Content="播放前倒计时 5 秒"
+                                          Checked="DelayedStartCheck_Changed" Unchecked="DelayedStartCheck_Changed" Margin="0,0,22,0" />
+                                <TextBlock Text="播放倍速" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <ComboBox x:Name="RateCombo" Width="120" SelectionChanged="RateCombo_SelectionChanged">
+                                    <ComboBoxItem Content="0.5x" Tag="0.5" />
+                                    <ComboBoxItem Content="0.75x" Tag="0.75" />
+                                    <ComboBoxItem Content="1x（正常）" Tag="1" IsSelected="True" />
+                                    <ComboBoxItem Content="1.25x" Tag="1.25" />
+                                    <ComboBoxItem Content="1.5x" Tag="1.5" />
+                                    <ComboBoxItem Content="2x" Tag="2" />
+                                </ComboBox>
+                            </WrapPanel>
 
                             <WrapPanel Margin="0,0,0,10">
                                 <Button x:Name="OverlayButton" Content="打开弹幕层" Click="OverlayButton_Click" />
@@ -121,6 +148,10 @@
                                 <Button Content="保存进度" Click="SaveProfileButton_Click" />
                                 <Button Content="清屏 3 秒" Click="ClearButton_Click" />
                                 <Button Content="设置" Click="SettingsButton_Click" />
+                                <Button Content="导入 XML" Click="ImportXmlButton_Click" />
+                                <Button Content="导出 XML" Tag="xml" Click="ExportButton_Click" />
+                                <Button Content="导出 ASS" Tag="ass" Click="ExportButton_Click" />
+                                <Button Content="导出 JSON" Tag="json" Click="ExportButton_Click" />
                             </WrapPanel>
 
                             <WrapPanel>
@@ -136,8 +167,10 @@
                     </Border>
                 </StackPanel>
             </ScrollViewer>
+        </Grid>
 
-            <Grid x:Name="SettingsPage" Visibility="Collapsed" Background="{StaticResource PageBrush}" Panel.ZIndex="10">
+        <Grid x:Name="SettingsPage" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed"
+              Background="{StaticResource PageBrush}" Panel.ZIndex="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="78" />
                     <RowDefinition Height="*" />
@@ -227,7 +260,6 @@
                     <Button Content="✓ 保存设置" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="0,0,24,0" Click="SaveSettingsButton_Click" />
                 </Border>
-            </Grid>
         </Grid>
     </Grid>
 </Window>

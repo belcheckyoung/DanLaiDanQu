@@ -17,12 +17,13 @@ final class SettingsStore {
 
     var rules = FilterRules() {
         didSet {
-            save("keywords", rules.keywords.joined(separator: "\n"))
-            save("regexPatterns", rules.regexPatterns.joined(separator: "\n"))
-            save("showTop", rules.showTop ? "1" : "0")
-            save("showBottom", rules.showBottom ? "1" : "0")
-            save("blockColored", rules.blockColored ? "1" : "0")
-            save("mergeDuplicates", rules.mergeDuplicates ? "1" : "0")
+            db.setSetting("keywords", rules.keywords.joined(separator: "\n"))
+            db.setSetting("regexPatterns", rules.regexPatterns.joined(separator: "\n"))
+            db.setSetting("showTop", rules.showTop ? "1" : "0")
+            db.setSetting("showBottom", rules.showBottom ? "1" : "0")
+            db.setSetting("blockColored", rules.blockColored ? "1" : "0")
+            db.setSetting("mergeDuplicates", rules.mergeDuplicates ? "1" : "0")
+            onChange?()
         }
     }
 

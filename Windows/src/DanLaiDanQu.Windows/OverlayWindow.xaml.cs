@@ -20,6 +20,8 @@ public partial class OverlayWindow : Window
         public required double ExpireTime { get; init; }
     }
 
+    private readonly record struct ScrollLaneState(double EntryTime, double Width, double Speed);
+
     private const int GwlExStyle = -20;
     private const int WsExTransparent = 0x00000020;
     private const int WsExNoActivate = 0x08000000;
@@ -29,7 +31,9 @@ public partial class OverlayWindow : Window
     private readonly List<ActiveItem> _active = [];
     private IReadOnlyList<Danmaku> _danmaku = [];
     private AppSettings _settings;
-    private double[] _laneReadyAt = [];
+    private ScrollLaneState[] _scrollLanes = [];
+    private double[] _topLaneReadyAt = [];
+    private double[] _bottomLaneReadyAt = [];
     private int _nextIndex;
     private DateTimeOffset? _clearUntil;
     private bool _clickThrough;
@@ -46,7 +50,7 @@ public partial class OverlayWindow : Window
         Top = area.Top;
         Width = area.Width;
         Height = Math.Max(area.Height * 0.42, 280);
-        if (settings.OverlayPlacement is { Width: > 200, Height: > 100 } saved)
+        if (settings.OverlayPlacement is { Width: > 200, Height: > 100 } saved && IsPlacementVisible(saved))
         {
             Left = saved.Left;
             Top = saved.Top;
@@ -138,7 +142,14 @@ public partial class OverlayWindow : Window
             }
 
             _clearUntil = null;
-            Resync();
+            ClearActive();
+            RebuildLanes();
+            var resumeTime = _clock.CurrentTime;
+            _nextIndex = 0;
+            while (_nextIndex < _danmaku.Count && _danmaku[_nextIndex].Time <= resumeTime)
+            {
+                _nextIndex++;
+            }
         }
 
         var time = _clock.CurrentTime;
@@ -202,42 +213,82 @@ public partial class OverlayWindow : Window
         text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var textWidth = Math.Max(text.DesiredSize.Width, 1);
         var lineHeight = Math.Max(_settings.FontSize * 1.35 + _settings.LaneSpacing, 24);
-        var lane = AllocateLane(item.Time, lineHeight);
         var expire = item.Time + (item.Mode == DanmakuMode.Scroll ? Math.Max(_settings.ScrollDuration, 1) : 5);
 
         if (item.Mode == DanmakuMode.Scroll)
         {
             var speed = (CanvasWidth + textWidth) / Math.Max(_settings.ScrollDuration, 1);
+            var lane = AllocateScrollLane(item.Time, textWidth, speed);
+            if (lane is null)
+            {
+                return;
+            }
             Canvas.SetLeft(text, CanvasWidth - ((now - item.Time) * speed));
-            Canvas.SetTop(text, lane * lineHeight);
+            Canvas.SetTop(text, lane.Value * lineHeight);
             _active.Add(new ActiveItem { View = text, Danmaku = item, Speed = speed, ExpireTime = expire });
         }
         else
         {
+            var lane = AllocateFixedLane(item.Mode, item.Time);
+            if (lane is null)
+            {
+                return;
+            }
             Canvas.SetLeft(text, Math.Max((CanvasWidth - textWidth) / 2, 0));
             Canvas.SetTop(text, item.Mode == DanmakuMode.Top
-                ? lane * lineHeight
-                : Math.Max(CanvasHeight - ((lane + 1) * lineHeight), 0));
+                ? lane.Value * lineHeight
+                : Math.Max(CanvasHeight - ((lane.Value + 1) * lineHeight), 0));
             _active.Add(new ActiveItem { View = text, Danmaku = item, Speed = 0, ExpireTime = expire });
         }
 
         DanmakuCanvas.Children.Add(text);
     }
 
-    private int AllocateLane(double entryTime, double lineHeight)
+    private int? AllocateScrollLane(double entryTime, double width, double speed)
     {
-        if (_laneReadyAt.Length == 0)
+        if (_scrollLanes.Length == 0)
         {
             RebuildLanes();
         }
 
-        var lane = Array.FindIndex(_laneReadyAt, ready => ready <= entryTime);
-        if (lane < 0)
+        int? best = null;
+        var bestSlack = double.NegativeInfinity;
+        for (var index = 0; index < _scrollLanes.Length; index++)
         {
-            lane = Array.IndexOf(_laneReadyAt, _laneReadyAt.Min());
+            var lane = _scrollLanes[index];
+            if (double.IsNegativeInfinity(lane.EntryTime))
+            {
+                best = index;
+                break;
+            }
+
+            var elapsed = entryTime - lane.EntryTime;
+            var tailCleared = lane.Speed * elapsed >= lane.Width;
+            var previousExit = lane.EntryTime + ((CanvasWidth + lane.Width) / Math.Max(lane.Speed, 1));
+            var noCatchUp = speed <= lane.Speed || (previousExit - entryTime) * speed <= CanvasWidth;
+            if (tailCleared && noCatchUp && elapsed > bestSlack)
+            {
+                best = index;
+                bestSlack = elapsed;
+            }
         }
 
-        _laneReadyAt[lane] = entryTime + Math.Clamp(_settings.ScrollDuration * 0.18, 0.8, 3.5);
+        if (best is not null)
+        {
+            _scrollLanes[best.Value] = new ScrollLaneState(entryTime, width, speed);
+        }
+        return best;
+    }
+
+    private int? AllocateFixedLane(DanmakuMode mode, double entryTime)
+    {
+        var lanes = mode == DanmakuMode.Top ? _topLaneReadyAt : _bottomLaneReadyAt;
+        var lane = Array.FindIndex(lanes, ready => ready <= entryTime);
+        if (lane < 0)
+        {
+            return null;
+        }
+        lanes[lane] = entryTime + 5;
         return lane;
     }
 
@@ -246,9 +297,16 @@ public partial class OverlayWindow : Window
         var lineHeight = Math.Max(_settings.FontSize * 1.35 + _settings.LaneSpacing, 24);
         var usable = CanvasHeight * Math.Clamp(_settings.DisplayAreaRatio, 0.2, 1.0);
         var count = Math.Max((int)(usable / lineHeight), 1);
-        if (_laneReadyAt.Length != count)
+        if (_scrollLanes.Length != count)
         {
-            _laneReadyAt = Enumerable.Repeat(double.NegativeInfinity, count).ToArray();
+            _scrollLanes = Enumerable.Repeat(
+                new ScrollLaneState(double.NegativeInfinity, 0, 0), count).ToArray();
+        }
+        var fixedCount = Math.Max(count / 2, 1);
+        if (_topLaneReadyAt.Length != fixedCount)
+        {
+            _topLaneReadyAt = Enumerable.Repeat(double.NegativeInfinity, fixedCount).ToArray();
+            _bottomLaneReadyAt = Enumerable.Repeat(double.NegativeInfinity, fixedCount).ToArray();
         }
     }
 
@@ -262,7 +320,21 @@ public partial class OverlayWindow : Window
     {
         DanmakuCanvas.Children.Clear();
         _active.Clear();
-        Array.Fill(_laneReadyAt, double.NegativeInfinity);
+        Array.Fill(_scrollLanes, new ScrollLaneState(double.NegativeInfinity, 0, 0));
+        Array.Fill(_topLaneReadyAt, double.NegativeInfinity);
+        Array.Fill(_bottomLaneReadyAt, double.NegativeInfinity);
+    }
+
+    private static bool IsPlacementVisible(WindowPlacement placement)
+    {
+        var left = SystemParameters.VirtualScreenLeft;
+        var top = SystemParameters.VirtualScreenTop;
+        var right = left + SystemParameters.VirtualScreenWidth;
+        var bottom = top + SystemParameters.VirtualScreenHeight;
+        return placement.Left + placement.Width > left + 80 &&
+               placement.Top + placement.Height > top + 80 &&
+               placement.Left < right - 80 &&
+               placement.Top < bottom - 80;
     }
 
     private double CanvasWidth => Math.Max(DanmakuCanvas.ActualWidth, ActualWidth > 0 ? ActualWidth : 1200);

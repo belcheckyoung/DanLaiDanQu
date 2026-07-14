@@ -52,7 +52,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleOverlay() { AppController.shared.toggleOverlay() }
-    @objc private func togglePlay() { AppController.shared.clock.toggle() }
+    @objc private func togglePlay() {
+        let controller = AppController.shared
+        if controller.clock.isPlaying {
+            controller.pausePlayback()
+        } else {
+            if controller.overlayWindow?.isVisible != true { controller.openOverlay() }
+            controller.clock.play()
+        }
+    }
 
     // MARK: - 主菜单（保证 ⌘C/⌘V/⌘Q 可用）
 

@@ -95,14 +95,15 @@ final class BilibiliClient {
         let url = URL(string: "https://api.bilibili.com/x/v1/dm/list.so?oid=\(cid)")!
         let raw = try await get(url)
         let xmlData = Self.inflateIfNeeded(raw)
-        let list = DanmakuParser.parseXML(xmlData)
-        if list.isEmpty && !xmlData.isEmpty {
-            // 内容非空但解析不出弹幕：可能是错误响应
-            if let s = String(data: xmlData, encoding: .utf8), s.contains("error") {
+        do {
+            return try DanmakuParser.parseXML(xmlData)
+        } catch {
+            if let s = String(data: xmlData, encoding: .utf8),
+               s.localizedCaseInsensitiveContains("error") {
                 throw BiliError.api(code: -1, message: "弹幕接口拒绝访问")
             }
+            throw error
         }
-        return list
     }
 
     // MARK: - 内部工具

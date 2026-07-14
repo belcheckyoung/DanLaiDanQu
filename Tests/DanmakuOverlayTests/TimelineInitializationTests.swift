@@ -2,6 +2,21 @@ import XCTest
 @testable import DanmakuOverlay
 
 final class TimelineInitializationTests: XCTestCase {
+    func testChangingRateWhilePlayingDoesNotJumpTimeline() {
+        var now = Date(timeIntervalSince1970: 1_000)
+        let clock = PlaybackClock(now: { now })
+        clock.seek(to: 10)
+        clock.play()
+        now = now.addingTimeInterval(5)
+
+        XCTAssertEqual(clock.currentTime, 15, accuracy: 0.001)
+        clock.rate = 2
+        XCTAssertEqual(clock.currentTime, 15, accuracy: 0.001)
+
+        now = now.addingTimeInterval(2)
+        XCTAssertEqual(clock.currentTime, 19, accuracy: 0.001)
+    }
+
     func testSeekWorksBeforeOverlayWindowIsCreated() {
         let clock = PlaybackClock()
         let controller = AppController(clock: clock, registerHotkeys: false)

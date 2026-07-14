@@ -1,19 +1,32 @@
 import Foundation
 
+enum DanmakuParseError: LocalizedError {
+    case invalidXML(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidXML(let message):
+            return "弹幕 XML 解析失败：\(message)"
+        }
+    }
+}
+
 /// 解析 B 站弹幕 XML（<d p="time,mode,fontsize,color,timestamp,pool,userhash,rowid">text</d>）
 enum DanmakuParser {
 
-    static func parseXML(_ data: Data) -> [Danmaku] {
+    static func parseXML(_ data: Data) throws -> [Danmaku] {
         let delegate = XMLDelegate()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
-        parser.parse()
+        guard parser.parse() else {
+            throw DanmakuParseError.invalidXML(parser.parserError?.localizedDescription ?? "文件格式无效")
+        }
         return delegate.result.sorted { $0.time < $1.time }
     }
 
     static func parseXMLFile(at url: URL) throws -> [Danmaku] {
         let data = try Data(contentsOf: url)
-        return parseXML(BilibiliClient.inflateIfNeeded(data))
+        return try parseXML(BilibiliClient.inflateIfNeeded(data))
     }
 
     private final class XMLDelegate: NSObject, XMLParserDelegate {

@@ -4,24 +4,39 @@ import Foundation
 final class PlaybackClock {
 
     private(set) var isPlaying = false
-    var rate: Double = 1.0 {
-        didSet { rebase() }
+    private var storedRate: Double = 1.0
+    var rate: Double {
+        get { storedRate }
+        set {
+            // 先按旧倍速结算已流逝的时间，再切换倍速，避免时间轴跳变。
+            let settledTime = currentTime
+            storedRate = min(max(newValue, 0.1), 4.0)
+            baseTime = settledTime
+            baseDate = now()
+            onStateChange?()
+        }
     }
 
     /// 时钟基准：currentTime = baseTime + (now - baseDate) * rate
     private var baseTime: Double = 0
-    private var baseDate = Date()
+    private var baseDate: Date
+    private let now: () -> Date
 
     var onStateChange: (() -> Void)?
 
     var currentTime: Double {
         guard isPlaying else { return baseTime }
-        return baseTime + Date().timeIntervalSince(baseDate) * rate
+        return baseTime + now().timeIntervalSince(baseDate) * rate
+    }
+
+    init(now: @escaping () -> Date = Date.init) {
+        self.now = now
+        self.baseDate = now()
     }
 
     func play() {
         guard !isPlaying else { return }
-        baseDate = Date()
+        baseDate = now()
         isPlaying = true
         onStateChange?()
     }
@@ -40,7 +55,7 @@ final class PlaybackClock {
     /// 跳转到绝对时间
     func seek(to time: Double) {
         baseTime = max(time, 0)
-        baseDate = Date()
+        baseDate = now()
         onStateChange?()
     }
 
@@ -52,14 +67,8 @@ final class PlaybackClock {
     /// 将当前时刻设为 0 秒并开始播放（「从此刻同步」）
     func syncFromNow() {
         baseTime = 0
-        baseDate = Date()
+        baseDate = now()
         isPlaying = true
-        onStateChange?()
-    }
-
-    private func rebase() {
-        baseTime = currentTime
-        baseDate = Date()
         onStateChange?()
     }
 }

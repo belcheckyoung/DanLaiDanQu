@@ -4,6 +4,7 @@ import AppKit
 final class DisplaySettingsPage: NSVisualEffectView {
     struct Actions {
         let close: Selector
+        let save: Selector
         let fontChanged: Selector
         let opacityChanged: Selector
         let speedChanged: Selector
@@ -171,7 +172,7 @@ final class DisplaySettingsPage: NSVisualEffectView {
         header.addView(backButton, in: .leading)
         header.addView(pageTitle, in: .leading)
 
-        let saveButton = NSButton(title: "保存设置", target: target, action: actions.close)
+        let saveButton = NSButton(title: "保存设置", target: target, action: actions.save)
         saveButton.bezelStyle = .glass
         saveButton.bezelColor = OverlayTheme.accentPink.withAlphaComponent(0.42)
         saveButton.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "保存设置")

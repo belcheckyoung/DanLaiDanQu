@@ -22,7 +22,7 @@ public static class FilterEngine
                 (rules.BlockColored && item.Color != 0xFFFFFF) ||
                 (rules.MaxLength > 0 && item.Text.Length > rules.MaxLength) ||
                 rules.Keywords.Any(keyword => item.Text.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
-                regexes.Any(regex => regex.IsMatch(item.Text)))
+                regexes.Any(regex => IsMatchSafe(regex, item.Text)))
             {
                 continue;
             }
@@ -119,6 +119,23 @@ public static class FilterEngine
 
         AddToken();
         return (keywords, regexes);
+    }
+
+    public static IReadOnlyList<string> InvalidRegexPatterns(IEnumerable<string> patterns) => patterns
+        .Where(pattern => TryRegex(pattern) is null)
+        .ToArray();
+
+    private static bool IsMatchSafe(Regex regex, string text)
+    {
+        try
+        {
+            return regex.IsMatch(text);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // 用户规则不应使 UI 线程崩溃；超时内容按命中处理并屏蔽。
+            return true;
+        }
     }
 
     private static Regex? TryRegex(string pattern)

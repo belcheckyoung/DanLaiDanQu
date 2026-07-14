@@ -102,6 +102,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
 
         displaySettingsPage = DisplaySettingsPage(target: self, actions: .init(
             close: #selector(closeSettingsSheet),
+            save: #selector(saveSettingsPage),
             fontChanged: #selector(fontChanged),
             opacityChanged: #selector(opacityChanged),
             speedChanged: #selector(speedChanged),
@@ -256,6 +257,8 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
                     statusLabel.stringValue = "弹幕加载完成"
                 }
                 showPage(playback: true)
+            } catch is CancellationError {
+                // 用户发起了更新的加载请求，旧请求静默退出。
             } catch {
                 statusLabel.stringValue = error.localizedDescription
             }
@@ -327,7 +330,11 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         let page = info.pages[pagePopup.indexOfSelectedItem]
         Task { @MainActor in
             do { try await controller.selectPage(page) }
-            catch { statusLabel.stringValue = error.localizedDescription }
+            catch is CancellationError { refresh() }
+            catch {
+                statusLabel.stringValue = error.localizedDescription
+                refresh()
+            }
         }
     }
 
@@ -457,6 +464,28 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         mainContentScroll?.isHidden = false
     }
 
+    @objc private func saveSettingsPage() {
+        let candidate = displaySettingsPage.rules(basedOn: settings.rules)
+        let invalid = candidate.regexPatterns.filter { (try? NSRegularExpression(pattern: $0)) == nil }
+        guard invalid.isEmpty else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "正则表达式无效"
+            alert.informativeText = invalid.joined(separator: "\n")
+            if let window { alert.beginSheetModal(for: window) }
+            return
+        }
+
+        if settings.fontSize != displaySettingsPage.fontSize { settings.fontSize = displaySettingsPage.fontSize }
+        if settings.opacity != displaySettingsPage.opacity { settings.opacity = displaySettingsPage.opacity }
+        if settings.scrollDuration != displaySettingsPage.scrollDuration { settings.scrollDuration = displaySettingsPage.scrollDuration }
+        if settings.displayAreaRatio != displaySettingsPage.displayAreaRatio { settings.displayAreaRatio = displaySettingsPage.displayAreaRatio }
+        if settings.maxPerSecond != displaySettingsPage.maxPerSecond { settings.maxPerSecond = displaySettingsPage.maxPerSecond }
+        settings.rules = candidate
+        statusLabel.stringValue = "设置已保存"
+        closeSettingsSheet()
+    }
+
     @objc private func fontChanged() {
         settings.fontSize = displaySettingsPage.fontSize
         displaySettingsPage.updateValueLabels(from: settings)
@@ -482,11 +511,21 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     }
 
     @objc private func keywordsChanged() {
-        settings.rules = displaySettingsPage.rules(basedOn: settings.rules)
+        let candidate = displaySettingsPage.rules(basedOn: settings.rules)
+        guard candidate.regexPatterns.allSatisfy({ (try? NSRegularExpression(pattern: $0)) != nil }) else {
+            statusLabel.stringValue = "正则表达式无效，请检查后再保存"
+            return
+        }
+        settings.rules = candidate
     }
 
     @objc private func checksChanged() {
-        settings.rules = displaySettingsPage.rules(basedOn: settings.rules)
+        let candidate = displaySettingsPage.rules(basedOn: settings.rules)
+        guard candidate.regexPatterns.allSatisfy({ (try? NSRegularExpression(pattern: $0)) != nil }) else {
+            statusLabel.stringValue = "正则表达式无效，请检查后再保存"
+            return
+        }
+        settings.rules = candidate
     }
 
     // MARK: - 导入导出
@@ -576,8 +615,16 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
             guard let self else { return }
             // 时间轴独立于弹幕层，首次打开弹幕层之前也能正常拖动并保留位置
             let clock = self.controller.clock
-            let playing = clock.isPlaying
-            let t = max(clock.currentTime, 0)
+            var playing = clock.isPlaying
+            var t = max(clock.currentTime, 0)
+            let duration = self.totalDuration()
+            if playing, duration > 0, t >= duration {
+                self.controller.seek(to: duration)
+                self.controller.pausePlayback()
+                self.statusLabel.stringValue = "已播放到片尾"
+                playing = false
+                t = duration
+            }
             let m = Int(t) / 60, s = Int(t) % 60, d = Int(t * 10) % 10
             if self.controller.isCountingDown {
                 self.playbackPanel.setPlayButton(symbol: "xmark", title: "取消 \(self.controller.countdownRemaining)")
@@ -587,7 +634,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
                                                  title: playing ? "暂停" : "播放")
                 self.playbackPanel.setTimeDisplay(String(format: "%@ %02d:%02d.%d", playing ? "▶" : "⏸", m, s, d))
             }
-            self.playbackPanel.updateProgress(currentTime: t, duration: self.totalDuration(), recentSeekAt: self.lastSeekAt)
+            self.playbackPanel.updateProgress(currentTime: t, duration: duration, recentSeekAt: self.lastSeekAt)
             self.updatePlaybackStateLabels(currentTime: t)
             // 播放页状态行镜像来源页 statusLabel，两页共享一份提示文案
             if self.playbackPanel.statusLabel.stringValue != self.statusLabel.stringValue {

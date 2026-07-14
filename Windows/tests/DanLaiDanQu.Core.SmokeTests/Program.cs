@@ -32,6 +32,16 @@ var xml = "<?xml version=\"1.0\"?><i><d p=\"1.5,1,25,16777215,1,0,u,id,5\">hello
 var parsed = DanmakuParser.Parse(Encoding.UTF8.GetBytes(xml));
 Check(parsed.Count == 2, "XML parsing count failed");
 Check(parsed[0].Text == "hello & world" && parsed[1].Mode == DanmakuMode.Top, "XML parsing fields failed");
+var malformedRejected = false;
+try
+{
+    _ = DanmakuParser.Parse(Encoding.UTF8.GetBytes("<i><d p=\"1,1,25,1,1,0,u,id\">broken"));
+}
+catch (InvalidDataException)
+{
+    malformedRejected = true;
+}
+Check(malformedRejected, "malformed XML should fail instead of returning an empty success");
 
 var rules = new FilterRules { Keywords = ["block"], MergeDuplicates = true };
 var filtered = FilterEngine.Apply([
@@ -43,6 +53,35 @@ Check(filtered.Count == 1, "filtering and duplicate merging failed");
 
 var tokens = FilterEngine.ParseFilterText("广告，/哈{3,}/, spoiler");
 Check(tokens.Keywords.SequenceEqual(["广告", "spoiler"]) && tokens.Regexes.SequenceEqual(["哈{3,}"]), "filter tokenization failed");
+Check(FilterEngine.InvalidRegexPatterns(["[broken"]).Count == 1, "invalid regex validation failed");
+
+var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"DanLaiDanQu-tests-{Guid.NewGuid():N}");
+try
+{
+    var cache = new DanmakuCacheStore(Path.Combine(temporaryDirectory, "cache"));
+    cache.Save(123, parsed);
+    Check(cache.TryLoad(123)?.Count == 2, "danmaku cache roundtrip failed");
+
+    var exportedXml = Encoding.UTF8.GetString(DanmakuExporter.ExportXml(parsed, 123));
+    var exportedAss = Encoding.UTF8.GetString(DanmakuExporter.ExportAss(parsed, "test"));
+    Check(exportedXml.Contains("hello &amp; world") && exportedXml.Contains("<chatid>123</chatid>"), "XML export failed");
+    Check(exportedAss.Contains("[Events]") && exportedAss.Contains("Dialogue:"), "ASS export failed");
+
+    var settingsPath = Path.Combine(temporaryDirectory, "settings.json");
+    Directory.CreateDirectory(temporaryDirectory);
+    File.WriteAllText(settingsPath, "{\"Rules\":null,\"History\":null,\"SyncProfiles\":null,\"Opacity\":9}");
+    var settings = new SettingsStore(settingsPath).Current;
+    Check(settings.Rules is not null && settings.History is not null && settings.SyncProfiles is not null,
+        "settings normalization failed");
+    Check(Math.Abs(settings.Opacity - 1) < 0.001, "settings range normalization failed");
+}
+finally
+{
+    if (Directory.Exists(temporaryDirectory))
+    {
+        Directory.Delete(temporaryDirectory, recursive: true);
+    }
+}
 
 if (failures.Count > 0)
 {

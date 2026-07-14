@@ -60,7 +60,7 @@ public sealed class SettingsStore
         {
             if (File.Exists(FilePath))
             {
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
+                return Normalize(JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings());
             }
         }
         catch (JsonException)
@@ -71,7 +71,31 @@ public sealed class SettingsStore
         {
             // Fall back to defaults when the settings directory is temporarily unavailable.
         }
+        catch (UnauthorizedAccessException)
+        {
+            // Fall back to defaults when the settings file is not accessible.
+        }
 
         return new AppSettings();
+    }
+
+    private static AppSettings Normalize(AppSettings settings)
+    {
+        settings.Rules ??= new FilterRules();
+        settings.Rules.Keywords ??= [];
+        settings.Rules.RegexPatterns ??= [];
+        settings.SyncProfiles ??= [];
+        settings.History ??= [];
+        settings.FontSize = Math.Clamp(settings.FontSize, 14, 60);
+        settings.Opacity = Math.Clamp(settings.Opacity, 0.1, 1.0);
+        settings.ScrollDuration = Math.Clamp(settings.ScrollDuration, 4, 24);
+        settings.DisplayAreaRatio = Math.Clamp(settings.DisplayAreaRatio, 0.2, 1.0);
+        settings.MaxPerSecond = settings.MaxPerSecond is 0 or 5 or 10 or 20 or 30 ? settings.MaxPerSecond : 0;
+        settings.LaneSpacing = Math.Clamp(settings.LaneSpacing, 0, 20);
+        if (settings.History.Count > 20)
+        {
+            settings.History = settings.History.Take(20).ToList();
+        }
+        return settings;
     }
 }
