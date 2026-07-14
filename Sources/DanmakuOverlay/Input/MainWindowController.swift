@@ -30,8 +30,9 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     private var sourceCards: [NSView] = []      // 第一步：选片
     private var playbackCards: [NSView] = []    // 第二步：同步播放
     private var playbackPanel: PlaybackControlPanel!
-    private var displaySettingsSheet: DisplaySettingsSheet!
+    private var displaySettingsPage: DisplaySettingsPage!
     private weak var contentStack: NSStackView?
+    private weak var mainContentScroll: NSScrollView?
     private var rateMenuItems: [NSMenuItem] = []
     private var passthroughMenuItem: NSMenuItem?
 
@@ -99,7 +100,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         ))
         playbackPanel.delayedStart = settings.delayedStart
 
-        displaySettingsSheet = DisplaySettingsSheet(target: self, actions: .init(
+        displaySettingsPage = DisplaySettingsPage(target: self, actions: .init(
             close: #selector(closeSettingsSheet),
             fontChanged: #selector(fontChanged),
             opacityChanged: #selector(opacityChanged),
@@ -109,7 +110,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
             keywordsChanged: #selector(keywordsChanged),
             checksChanged: #selector(checksChanged)
         ))
-        displaySettingsSheet.restore(from: settings)
+        displaySettingsPage.restore(from: settings)
 
         let inputRow = MainWindowUI.hstack(linkField, loadButton)
         linkField.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -201,6 +202,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         scroll.automaticallyAdjustsContentInsets = false
         scroll.documentView = doc
         content.addSubview(scroll)
+        mainContentScroll = scroll
 
         NSLayoutConstraint.activate([
             scroll.topAnchor.constraint(equalTo: content.topAnchor),
@@ -214,6 +216,17 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
             container.leadingAnchor.constraint(equalTo: doc.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: doc.trailingAnchor),
             container.bottomAnchor.constraint(equalTo: doc.bottomAnchor),
+        ])
+
+        // 设置页与主内容处于同一窗口并覆盖整个内容区，不再显示独立 Sheet 的外框与侧边留白。
+        displaySettingsPage.translatesAutoresizingMaskIntoConstraints = false
+        displaySettingsPage.isHidden = true
+        content.addSubview(displaySettingsPage)
+        NSLayoutConstraint.activate([
+            displaySettingsPage.topAnchor.constraint(equalTo: content.topAnchor),
+            displaySettingsPage.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            displaySettingsPage.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            displaySettingsPage.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
 
         window.center()
@@ -433,43 +446,47 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     }
 
     @objc func openSettingsSheet() {
-        if let window { displaySettingsSheet.beginSheet(on: window) }
+        displaySettingsPage.restore(from: settings)
+        mainContentScroll?.isHidden = true
+        displaySettingsPage.isHidden = false
+        window?.makeFirstResponder(nil)
     }
 
     @objc private func closeSettingsSheet() {
-        displaySettingsSheet.endSheet(from: window)
+        displaySettingsPage.isHidden = true
+        mainContentScroll?.isHidden = false
     }
 
     @objc private func fontChanged() {
-        settings.fontSize = displaySettingsSheet.fontSize
-        displaySettingsSheet.updateValueLabels(from: settings)
+        settings.fontSize = displaySettingsPage.fontSize
+        displaySettingsPage.updateValueLabels(from: settings)
     }
 
     @objc private func opacityChanged() {
-        settings.opacity = displaySettingsSheet.opacity
-        displaySettingsSheet.updateValueLabels(from: settings)
+        settings.opacity = displaySettingsPage.opacity
+        displaySettingsPage.updateValueLabels(from: settings)
     }
 
     @objc private func speedChanged() {
-        settings.scrollDuration = displaySettingsSheet.scrollDuration
-        displaySettingsSheet.updateValueLabels(from: settings)
+        settings.scrollDuration = displaySettingsPage.scrollDuration
+        displaySettingsPage.updateValueLabels(from: settings)
     }
 
     @objc private func areaChanged() {
-        settings.displayAreaRatio = displaySettingsSheet.displayAreaRatio
-        displaySettingsSheet.updateValueLabels(from: settings)
+        settings.displayAreaRatio = displaySettingsPage.displayAreaRatio
+        displaySettingsPage.updateValueLabels(from: settings)
     }
 
     @objc private func densityChanged() {
-        settings.maxPerSecond = displaySettingsSheet.maxPerSecond
+        settings.maxPerSecond = displaySettingsPage.maxPerSecond
     }
 
     @objc private func keywordsChanged() {
-        settings.rules = displaySettingsSheet.rules(basedOn: settings.rules)
+        settings.rules = displaySettingsPage.rules(basedOn: settings.rules)
     }
 
     @objc private func checksChanged() {
-        settings.rules = displaySettingsSheet.rules(basedOn: settings.rules)
+        settings.rules = displaySettingsPage.rules(basedOn: settings.rules)
     }
 
     // MARK: - 导入导出

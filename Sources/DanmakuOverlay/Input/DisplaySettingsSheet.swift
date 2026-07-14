@@ -1,6 +1,7 @@
 import AppKit
 
-final class DisplaySettingsSheet {
+/// 主窗口内的全屏设置页；与主内容共用同一个窗口，避免 Sheet 四周露出父页面边框。
+final class DisplaySettingsPage: NSVisualEffectView {
     struct Actions {
         let close: Selector
         let fontChanged: Selector
@@ -11,8 +12,6 @@ final class DisplaySettingsSheet {
         let keywordsChanged: Selector
         let checksChanged: Selector
     }
-
-    let window: NSWindow
 
     private let fontSlider = NSSlider(value: 28, minValue: 14, maxValue: 60, target: nil, action: nil)
     private let opacitySlider = NSSlider(value: 0.9, minValue: 0.1, maxValue: 1.0, target: nil, action: nil)
@@ -34,26 +33,20 @@ final class DisplaySettingsSheet {
     private let densityValues = [0, 30, 20, 10, 5]
 
     init(target: AnyObject, actions: Actions) {
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 440),
-                          styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "显示与屏蔽设置"
-        OverlayTheme.configureGlassSheet(window)
+        super.init(frame: .zero)
+        material = .underWindowBackground
+        blendingMode = .behindWindow
+        state = .active
         configure(target: target, actions: actions)
     }
+
+    required init?(coder: NSCoder) { fatalError() }
 
     var fontSize: Double { fontSlider.doubleValue }
     var opacity: Double { opacitySlider.doubleValue }
     var scrollDuration: Double { speedSlider.doubleValue }
     var displayAreaRatio: Double { areaSlider.doubleValue }
     var maxPerSecond: Int { densityValues[densityPopup.indexOfSelectedItem] }
-
-    func beginSheet(on parent: NSWindow) {
-        parent.beginSheet(window)
-    }
-
-    func endSheet(from parent: NSWindow?) {
-        parent?.endSheet(window)
-    }
 
     func restore(from settings: SettingsStore) {
         fontSlider.doubleValue = settings.fontSize
@@ -124,9 +117,6 @@ final class DisplaySettingsSheet {
     }
 
     private func configure(target: AnyObject, actions: Actions) {
-        let root = MainWindowUI.windowBackdrop()
-        window.contentView = root
-
         densityPopup.addItems(withTitles: ["密度不限", "每秒 30 条", "每秒 20 条", "每秒 10 条", "每秒 5 条"])
         keywordField.placeholderString = "屏蔽关键词，逗号分隔；/正则/ 用斜杠包裹"
 
@@ -163,35 +153,86 @@ final class DisplaySettingsSheet {
         settingsGrid.column(at: 0).width = 92
 
         let checkRow = MainWindowUI.hstack(topCheck, bottomCheck, colorCheck, mergeCheck)
-        let done = NSButton(title: "完成", target: target, action: actions.close)
-        done.bezelStyle = .glass
-        done.bezelColor = OverlayTheme.accentPink.withAlphaComponent(0.42)
-        done.keyEquivalent = "\r"
-        let doneRow = NSStackView()
-        doneRow.orientation = .horizontal
-        doneRow.addView(done, in: .trailing)
+
+        let backButton = NSButton(title: "返回", target: target, action: actions.close)
+        backButton.bezelStyle = .glass
+        backButton.image = NSImage(systemSymbolName: "chevron.left", accessibilityDescription: "返回")
+        backButton.imagePosition = .imageLeading
+        backButton.keyEquivalent = "\u{1b}"
+
+        let pageTitle = NSTextField(labelWithString: "显示与屏蔽设置")
+        pageTitle.font = .systemFont(ofSize: 20, weight: .bold)
+        pageTitle.setContentHuggingPriority(.required, for: .horizontal)
+
+        let header = NSStackView()
+        header.orientation = .horizontal
+        header.alignment = .centerY
+        header.spacing = 12
+        header.addView(backButton, in: .leading)
+        header.addView(pageTitle, in: .leading)
+
+        let saveButton = NSButton(title: "保存设置", target: target, action: actions.close)
+        saveButton.bezelStyle = .glass
+        saveButton.bezelColor = OverlayTheme.accentPink.withAlphaComponent(0.42)
+        saveButton.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "保存设置")
+        saveButton.imagePosition = .imageLeading
+        saveButton.keyEquivalent = "\r"
+        let footer = NSStackView()
+        footer.orientation = .horizontal
+        footer.addView(saveButton, in: .trailing)
 
         let stack = NSStackView(views: [
             MainWindowUI.card(MainWindowUI.sectionStack([MainWindowUI.sectionHeader("slider.horizontal.3", "显示设置"), settingsGrid])),
             MainWindowUI.card(MainWindowUI.sectionStack([MainWindowUI.sectionHeader("eye.slash.fill", "屏蔽"), keywordField, checkRow])),
-            doneRow,
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
-        let inset = OverlayTheme.sheetContentInset
-        stack.edgeInsets = NSEdgeInsets(top: 24, left: inset, bottom: 22, right: inset)
         stack.translatesAutoresizingMaskIntoConstraints = false
         for view in stack.arrangedSubviews {
-            view.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -inset * 2).isActive = true
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
-        root.addSubview(stack)
+        let document = FlippedView()
+        document.translatesAutoresizingMaskIntoConstraints = false
+        document.addSubview(stack)
+
+        let scroll = NSScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.documentView = document
+
+        header.translatesAutoresizingMaskIntoConstraints = false
+        footer.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(header)
+        addSubview(scroll)
+        addSubview(footer)
+
+        let inset = OverlayTheme.windowContentInset
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: root.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            header.topAnchor.constraint(equalTo: topAnchor, constant: 48),
+            header.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            header.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
+
+            footer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            footer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
+            footer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
+
+            scroll.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 16),
+            scroll.leadingAnchor.constraint(equalTo: leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -12),
+
+            document.topAnchor.constraint(equalTo: scroll.contentView.topAnchor),
+            document.leadingAnchor.constraint(equalTo: scroll.contentView.leadingAnchor),
+            document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
+
+            stack.topAnchor.constraint(equalTo: document.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: inset),
+            stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -inset),
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor),
         ])
     }
 

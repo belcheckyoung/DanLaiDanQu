@@ -9,7 +9,6 @@ enum OverlayTheme {
     static let compactRadius: CGFloat = 9
     static let controlHeight: CGFloat = 30
     static let windowContentInset: CGFloat = 28
-    static let sheetContentInset: CGFloat = 24
 
     static func configureGlassWindow(_ window: NSWindow) {
         window.titlebarAppearsTransparent = true
@@ -22,15 +21,6 @@ enum OverlayTheme {
         window.hasShadow = true
     }
 
-    /// Sheet 版玻璃配置：不可缩放、不可背景拖动（sheet 不应独立移动），防御性关闭 releasedWhenClosed
-    static func configureGlassSheet(_ window: NSWindow) {
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.styleMask.insert(.fullSizeContentView)
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.isReleasedWhenClosed = false
-    }
 }
 
 enum MainWindowUI {
