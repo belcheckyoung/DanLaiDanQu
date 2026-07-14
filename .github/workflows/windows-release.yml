@@ -1,0 +1,113 @@
+name: Windows build and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Windows version without the "windows-v" prefix
+        required: true
+        default: 0.1.0
+  push:
+    tags:
+      - "windows-v*"
+    branches:
+      - main
+      - "codex/**"
+    paths:
+      - "Windows/**"
+      - ".github/workflows/windows-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like "refs/tags/windows-v*") {
+            $version = $env:GITHUB_REF_NAME -replace '^windows-v', ''
+          } else {
+            $version = "${{ inputs.version }}"
+            if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.1.0" }
+          }
+          "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Restore and run core smoke tests
+        shell: pwsh
+        run: |
+          dotnet restore Windows/tests/DanLaiDanQu.Core.SmokeTests/DanLaiDanQu.Core.SmokeTests.csproj
+          dotnet run --project Windows/tests/DanLaiDanQu.Core.SmokeTests/DanLaiDanQu.Core.SmokeTests.csproj -c Release --no-restore
+
+      - name: Publish self-contained Windows app
+        shell: pwsh
+        run: |
+          dotnet restore Windows/src/DanLaiDanQu.Windows/DanLaiDanQu.Windows.csproj -r win-x64
+          dotnet publish Windows/src/DanLaiDanQu.Windows/DanLaiDanQu.Windows.csproj `
+            -c Release -r win-x64 --self-contained true --no-restore `
+            -p:Version=${{ steps.version.outputs.value }} `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:PublishReadyToRun=false `
+            -o Windows/artifacts/publish
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          $publishDir = (Resolve-Path "Windows/artifacts/publish").Path
+          $outputDir = New-Item -ItemType Directory -Force "Windows/artifacts/installer"
+          & $iscc `
+            "/DMyAppVersion=${{ steps.version.outputs.value }}" `
+            "/DPublishDir=$publishDir" `
+            "/DOutputDir=$($outputDir.FullName)" `
+            "Windows/installer/DanLaiDanQu.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DanLaiDanQu-Windows-v${{ steps.version.outputs.value }}-Setup
+          path: Windows/artifacts/installer/DanLaiDanQu-Windows-v${{ steps.version.outputs.value }}-Setup.exe
+          if-no-files-found: error
+
+      - name: Create Windows GitHub Release
+        if: startsWith(github.ref, 'refs/tags/windows-v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $asset = "Windows/artifacts/installer/DanLaiDanQu-Windows-v${{ steps.version.outputs.value }}-Setup.exe"
+          $notes = @"
+          ## Windows v${{ steps.version.outputs.value }}
+
+          - Windows 10/11 x64 原生 WPF 版本
+          - 自包含安装包，无需预装 .NET Runtime
+          - 支持 Bilibili 链接、分 P、透明置顶弹幕层、时间轴同步、显示与屏蔽设置
+          - 支持鼠标穿透、最近观看、同步进度记忆和全局快捷键
+
+          macOS 版本请继续使用 v0.3.2 Release。
+          "@
+          gh release create $env:GITHUB_REF_NAME $asset `
+            --repo $env:GITHUB_REPOSITORY `
+            --verify-tag `
+            --title "弹来弹去 Windows v${{ steps.version.outputs.value }}" `
+            --notes $notes

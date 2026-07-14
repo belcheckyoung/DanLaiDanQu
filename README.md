@@ -1,6 +1,6 @@
 # 弹来弹去 (DanLaiDanQu)
 
-macOS 桌面弹幕外挂层：输入 Bilibili 视频链接，把 B 站弹幕以透明置顶悬浮层的形式覆盖在任意播放器（YouTube / Infuse / IINA / QuickTime…）上方。不播放、不下载视频，只做弹幕获取、渲染、时间轴校准和显示控制。
+macOS / Windows 桌面弹幕外挂层：输入 Bilibili 视频链接，把 B 站弹幕以透明置顶悬浮层的形式覆盖在任意播放器（YouTube / Infuse / IINA / QuickTime…）上方。不播放、不下载视频，只做弹幕获取、渲染、时间轴校准和显示控制。
 <img width="1512" height="949" alt="Snipaste_2026-07-10_12-25-23" src="https://github.com/user-attachments/assets/d643f154-9f3b-45e3-a5ba-a16b91ebd41f" />
 
 
@@ -20,6 +20,13 @@ open Package.swift  # 在 Xcode 中打开开发
 ```bash
 .build/debug/DanmakuOverlay --test-fetch "https://www.bilibili.com/video/BV..."
 ```
+
+## Windows 版本
+
+Windows 10/11 x64 原生版本位于 [`Windows/`](Windows/README.md)，采用 .NET 8 + WPF，功能包含透明置顶弹幕层、鼠标穿透、时间轴同步、分 P、显示与屏蔽设置、最近观看和全局快捷键。Release 安装包为自包含构建，用户无需预装 .NET Runtime。
+
+- [下载 Windows 安装包](https://github.com/belcheckyoung/DanLaiDanQu/releases/tag/windows-v0.1.0)
+- [Windows 构建与开发说明](Windows/README.md)
 
 ## 使用流程（两步）
 

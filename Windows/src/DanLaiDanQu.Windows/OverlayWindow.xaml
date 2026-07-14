@@ -1,0 +1,22 @@
+<Window x:Class="DanLaiDanQu.Windows.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="弹幕层"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        ResizeMode="CanResizeWithGrip"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Grid>
+        <Border x:Name="InteractionBorder" BorderBrush="#DFFB7299" BorderThickness="0" Background="Transparent" />
+        <Canvas x:Name="DanmakuCanvas" ClipToBounds="True" />
+        <Border x:Name="CountdownPanel" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="440" Height="190" CornerRadius="28" Background="#AA15191C">
+            <TextBlock x:Name="CountdownText" Foreground="White" FontFamily="Microsoft YaHei UI" FontWeight="Bold"
+                       FontSize="30" TextAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Border>
+    </Grid>
+</Window>

@@ -3,3 +3,6 @@ build/
 .DS_Store
 .swiftpm/
 *.xcodeproj
+Windows/**/bin/
+Windows/**/obj/
+Windows/artifacts/

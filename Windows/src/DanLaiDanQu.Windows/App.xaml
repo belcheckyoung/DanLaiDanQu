@@ -1,0 +1,55 @@
+<Application x:Class="DanLaiDanQu.Windows.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FB7299" />
+        <SolidColorBrush x:Key="PageBrush" Color="#F2F6F8" />
+        <SolidColorBrush x:Key="CardBrush" Color="#FAFFFFFF" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#6B7780" />
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+        </Style>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="#D9E1E5" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style x:Key="StatusPill" TargetType="Border">
+            <Setter Property="Background" Value="#EDF2F4" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+    </Application.Resources>
+</Application>

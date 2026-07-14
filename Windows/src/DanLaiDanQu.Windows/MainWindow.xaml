@@ -1,0 +1,233 @@
+<Window x:Class="DanLaiDanQu.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="弹来弹去"
+        Icon="Assets/AppIcon.png"
+        Width="760"
+        Height="760"
+        MinWidth="680"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource PageBrush}"
+        FontFamily="Microsoft YaHei UI"
+        SourceInitialized="Window_SourceInitialized"
+        Closing="Window_Closing">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="84" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#F8FFFFFF" BorderBrush="#D9E1E5" BorderThickness="0,0,0,1">
+            <Grid Margin="24,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Width="48" Height="48" CornerRadius="12" Background="#22FB7299" VerticalAlignment="Center">
+                    <TextBlock Text="弹" Foreground="{StaticResource AccentBrush}" FontSize="22" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="弹来弹去" FontSize="21" FontWeight="Bold" />
+                    <TextBlock Text="Bilibili 弹幕悬浮层 · Windows v0.1.0" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="⚙ 设置" Click="SettingsButton_Click" VerticalAlignment="Center" Margin="0" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <ScrollViewer x:Name="MainPageScroll" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="24,20,24,24">
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="第一步 · 选择弹幕源" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="LinkBox" Grid.Column="0"
+                                         ToolTip="粘贴 Bilibili 视频链接、BV 号、av 号或 b23.tv 短链"
+                                         KeyDown="LinkBox_KeyDown" />
+                                <Button x:Name="LoadButton" Grid.Column="1" Content="加载弹幕" Style="{StaticResource PrimaryButton}"
+                                        Click="LoadButton_Click" Margin="10,0,0,0" />
+                            </Grid>
+                            <TextBlock x:Name="SourceStatusText" Text="粘贴 Bilibili 视频链接（BV / av / b23.tv）"
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="HistoryCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="最近观看 · 选择后继续" />
+                            <ComboBox x:Name="HistoryCombo" DisplayMemberPath="DisplayTitle"
+                                      SelectionChanged="HistoryCombo_SelectionChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="VideoCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="正在播放" />
+                            <TextBlock x:Name="VideoTitleText" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock x:Name="VideoMetaText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,6,0,0" />
+                            <ComboBox x:Name="PageCombo" DisplayMemberPath="DisplayTitle" Margin="0,12,0,0"
+                                      SelectionChanged="PageCombo_SelectionChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PlaybackCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="第二步 · 同步播放" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource StatusPill}"><TextBlock x:Name="PlayStateText" Text="已暂停" FontSize="11" /></Border>
+                                <Border Grid.Column="1" Style="{StaticResource StatusPill}"><TextBlock x:Name="OverlayStateText" Text="弹幕层未打开" FontSize="11" /></Border>
+                                <Border Grid.Column="2" Style="{StaticResource StatusPill}"><TextBlock x:Name="TimelineStateText" Text="00:00 / 00:00" FontSize="11" /></Border>
+                                <Border Grid.Column="3" Style="{StaticResource StatusPill}" Margin="0"><TextBlock x:Name="CountStateText" Text="0 条" FontSize="11" /></Border>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="PlayButton" Grid.Column="0" Content="▶ 播放" Width="96" Style="{StaticResource PrimaryButton}"
+                                        Click="PlayButton_Click" />
+                                <TextBlock x:Name="CurrentTimeText" Grid.Column="1" Text="⏸ 00:00.0" FontFamily="Consolas"
+                                           VerticalAlignment="Center" Margin="4,0,12,0" />
+                                <Slider x:Name="ProgressSlider" Grid.Column="2" Minimum="0" Maximum="1" IsEnabled="False"
+                                        PreviewMouseLeftButtonDown="ProgressSlider_PreviewMouseLeftButtonDown"
+                                        PreviewMouseLeftButtonUp="ProgressSlider_PreviewMouseLeftButtonUp"
+                                        ValueChanged="ProgressSlider_ValueChanged" />
+                                <TextBlock x:Name="DurationText" Grid.Column="3" Text="00:00 / 00:00" FontFamily="Consolas"
+                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                            </Grid>
+
+                            <CheckBox x:Name="DelayedStartCheck" Content="播放前倒计时 5 秒" Margin="0,2,0,12" />
+
+                            <WrapPanel Margin="0,0,0,10">
+                                <Button x:Name="OverlayButton" Content="打开弹幕层" Click="OverlayButton_Click" />
+                                <Button Content="5 秒后从 0 同步" Click="SyncButton_Click" />
+                                <Button Content="保存进度" Click="SaveProfileButton_Click" />
+                                <Button Content="清屏 3 秒" Click="ClearButton_Click" />
+                                <Button Content="设置" Click="SettingsButton_Click" />
+                            </WrapPanel>
+
+                            <WrapPanel>
+                                <Button Content="-5s" Tag="-5" Click="AdjustButton_Click" />
+                                <Button Content="-1s" Tag="-1" Click="AdjustButton_Click" />
+                                <TextBox x:Name="OffsetBox" Width="110" ToolTip="输入秒数，如 +12.5 或 -3" Margin="0,0,8,0" />
+                                <Button Content="应用偏移" Click="ApplyOffsetButton_Click" />
+                                <Button Content="+1s" Tag="1" Click="AdjustButton_Click" />
+                                <Button Content="+5s" Tag="5" Click="AdjustButton_Click" />
+                            </WrapPanel>
+                            <TextBlock x:Name="PlaybackStatusText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid x:Name="SettingsPage" Visibility="Collapsed" Background="{StaticResource PageBrush}" Panel.ZIndex="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="78" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="76" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#F8FFFFFF" BorderBrush="#D9E1E5" BorderThickness="0,0,0,1">
+                    <Grid Margin="24,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="‹ 返回" Click="SettingsBackButton_Click" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="显示与屏蔽设置" FontSize="21" FontWeight="Bold"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" />
+                    </Grid>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="24,18,24,8">
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="显示设置" />
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="字号" VerticalAlignment="Center" />
+                                    <Slider x:Name="FontSizeSlider" Grid.Column="1" Minimum="14" Maximum="60" ValueChanged="SettingsSlider_ValueChanged" />
+                                    <TextBlock x:Name="FontSizeValue" Grid.Column="2" Text="28 pt" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="透明度" VerticalAlignment="Center" />
+                                    <Slider x:Name="OpacitySlider" Grid.Column="1" Minimum="10" Maximum="100" ValueChanged="SettingsSlider_ValueChanged" />
+                                    <TextBlock x:Name="OpacityValue" Grid.Column="2" Text="90%" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="滚动时长" VerticalAlignment="Center" />
+                                    <Slider x:Name="ScrollDurationSlider" Grid.Column="1" Minimum="4" Maximum="24" ValueChanged="SettingsSlider_ValueChanged" />
+                                    <TextBlock x:Name="ScrollDurationValue" Grid.Column="2" Text="12 秒" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="显示区域" VerticalAlignment="Center" />
+                                    <Slider x:Name="DisplayAreaSlider" Grid.Column="1" Minimum="20" Maximum="100" ValueChanged="SettingsSlider_ValueChanged" />
+                                    <TextBlock x:Name="DisplayAreaValue" Grid.Column="2" Text="100%" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="220" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="弹幕密度" VerticalAlignment="Center" />
+                                    <ComboBox x:Name="DensityCombo" Grid.Column="1" SelectedIndex="0">
+                                        <ComboBoxItem Content="密度不限" Tag="0" />
+                                        <ComboBoxItem Content="每秒 30 条" Tag="30" />
+                                        <ComboBoxItem Content="每秒 20 条" Tag="20" />
+                                        <ComboBoxItem Content="每秒 10 条" Tag="10" />
+                                        <ComboBoxItem Content="每秒 5 条" Tag="5" />
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="屏蔽规则" />
+                                <TextBox x:Name="KeywordsBox" ToolTip="关键词用逗号分隔；正则表达式用 /斜杠/ 包裹" />
+                                <WrapPanel Margin="0,12,0,0">
+                                    <CheckBox x:Name="ShowTopCheck" Content="顶部弹幕" Margin="0,0,14,0" />
+                                    <CheckBox x:Name="ShowBottomCheck" Content="底部弹幕" Margin="0,0,14,0" />
+                                    <CheckBox x:Name="ShowColorCheck" Content="彩色弹幕" Margin="0,0,14,0" />
+                                    <CheckBox x:Name="MergeDuplicatesCheck" Content="合并重复" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="弹幕层操作" />
+                                <CheckBox x:Name="MousePassthroughCheck" Content="开启鼠标穿透（点击直接落到下层播放器）" Margin="0,0,0,10" />
+                                <TextBlock Text="关闭穿透后，可拖动和缩放弹幕层；重新开启后弹幕层不再拦截鼠标。"
+                                           Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" Background="#F8FFFFFF" BorderBrush="#D9E1E5" BorderThickness="0,1,0,0">
+                    <Button Content="✓ 保存设置" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" Margin="0,0,24,0" Click="SaveSettingsButton_Click" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
