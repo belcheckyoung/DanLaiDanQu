@@ -2,7 +2,8 @@ APP_NAME = 弹来弹去
 BUNDLE = build/$(APP_NAME).app
 # Universal 二进制（Intel + Apple Silicon）
 BINARY = .build/apple/Products/Release/DanmakuOverlay
-DMG = build/$(APP_NAME).dmg
+VERSION = $(shell /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
+DMG = build/DanLaiDanQu-v$(VERSION).dmg
 
 .PHONY: build app run dmg clean
 

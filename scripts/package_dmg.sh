@@ -5,10 +5,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 APP_NAME="弹来弹去"
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
 BUNDLE="build/${APP_NAME}.app"
 STAGING="build/dmg-staging"
 TMP_DMG="build/tmp-rw.dmg"
-FINAL_DMG="build/${APP_NAME}.dmg"
+FINAL_DMG="build/DanLaiDanQu-v${VERSION}.dmg"
 VOL="/Volumes/${APP_NAME}"
 
 [ -d "$BUNDLE" ] || { echo "先运行 make app 生成 ${BUNDLE}"; exit 1; }

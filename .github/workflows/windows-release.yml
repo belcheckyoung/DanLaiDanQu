@@ -6,7 +6,7 @@ on:
       version:
         description: Windows version without the "windows-v" prefix
         required: true
-        default: 0.1.0
+        default: 0.2.0
   push:
     tags:
       - "windows-v*"
@@ -44,7 +44,7 @@ jobs:
             $version = $env:GITHUB_REF_NAME -replace '^windows-v', ''
           } else {
             $version = "${{ inputs.version }}"
-            if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.1.0" }
+            if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.2.0" }
           }
           "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
@@ -101,10 +101,12 @@ jobs:
 
           - Windows 10/11 x64 原生 WPF 版本
           - 自包含安装包，无需预装 .NET Runtime
-          - 支持 Bilibili 链接、分 P、透明置顶弹幕层、时间轴同步、显示与屏蔽设置
-          - 支持鼠标穿透、最近观看、同步进度记忆和全局快捷键
+          - 支持 Bilibili 链接、分 P、本地 XML 导入，以及 XML / ASS / JSON 导出
+          - 支持透明置顶弹幕层、时间轴同步、倍速、显示与屏蔽设置
+          - 支持系统托盘、鼠标穿透、缓存、最近观看、同步进度记忆和全局快捷键
+          - 修复加载切换竞态、清屏回放旧弹幕、轨道碰撞、结束后仍播放等逻辑问题
 
-          macOS 版本请继续使用 v0.3.2 Release。
+          macOS 版本请使用 v0.3.3 Release。
           "@
           gh release create $env:GITHUB_REF_NAME $asset `
             --repo $env:GITHUB_REPOSITORY `
