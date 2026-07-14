@@ -659,8 +659,12 @@ public partial class MainWindow : Window
 
     private void BackToSourceButton_Click(object sender, RoutedEventArgs e)
     {
-        SaveSyncProfile();
-        _clock.Pause();
+        PrepareForContentChange();
+        if (_overlay?.IsVisible == true)
+        {
+            SaveOverlayPlacement();
+            _overlay.Hide();
+        }
         _isPlaybackPage = false;
         SourceCard.Visibility = Visibility.Visible;
         HistoryCard.Visibility = !_isPlaybackPage && Settings.History.Count > 0
@@ -669,6 +673,7 @@ public partial class MainWindow : Window
         VideoCard.Visibility = Visibility.Collapsed;
         PlaybackCard.Visibility = Visibility.Collapsed;
         LinkBox.Focus();
+        RefreshPlaybackUi();
     }
 
     private void ShowPlaybackPage()

@@ -31,7 +31,7 @@
                 </Border>
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="弹来弹去" FontSize="21" FontWeight="Bold" />
-                    <TextBlock Text="Bilibili 弹幕悬浮层 · Windows v0.2.1" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+                    <TextBlock Text="Bilibili 弹幕悬浮层 · Windows v0.2.2" Foreground="{StaticResource MutedBrush}" FontSize="11" />
                 </StackPanel>
                 <Button Grid.Column="2" Content="⚙ 设置" Click="SettingsButton_Click" VerticalAlignment="Center" Margin="0" />
             </Grid>

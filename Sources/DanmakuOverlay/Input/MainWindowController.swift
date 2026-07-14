@@ -363,6 +363,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     }
 
     @objc private func backToSource() {
+        controller.returnToVideoSelection()
         showPage(playback: false)
         window?.makeFirstResponder(linkField)
     }

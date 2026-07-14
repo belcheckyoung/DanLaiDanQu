@@ -178,6 +178,22 @@ final class AppController {
         onStateChange?()
     }
 
+    /// 返回选片页时完整退出当前播放状态，避免弹幕层继续覆盖其他窗口。
+    func returnToVideoSelection() {
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownRemaining = 0
+        clock.pause()
+        saveSyncProfile()
+        if let w = overlayWindow {
+            w.renderView.showCountdown(nil)
+            w.saveFrame()
+            w.renderView.stopRendering()
+            w.orderOut(nil)
+        }
+        onStateChange?()
+    }
+
     // MARK: - 倒计时启动（给用户 5 秒切到播放器点播放）
 
     private var countdownTimer: Timer?

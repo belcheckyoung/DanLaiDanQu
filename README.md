@@ -25,8 +25,8 @@ open Package.swift  # 在 Xcode 中打开开发
 
 Windows 10/11 x64 原生版本位于 [`Windows/`](Windows/README.md)，采用 .NET 8 + WPF，功能包含透明置顶弹幕层、鼠标穿透、时间轴同步、分 P、显示与屏蔽设置、最近观看和全局快捷键。Release 安装包为自包含构建，用户无需预装 .NET Runtime。
 
-- [下载 macOS v0.3.4 安装包](https://github.com/belcheckyoung/DanLaiDanQu/releases/tag/v0.3.4)
-- [下载 Windows v0.2.1 安装包](https://github.com/belcheckyoung/DanLaiDanQu/releases/tag/windows-v0.2.1)
+- [下载 macOS v0.3.5 安装包](https://github.com/belcheckyoung/DanLaiDanQu/releases/tag/v0.3.5)
+- [下载 Windows v0.2.2 安装包](https://github.com/belcheckyoung/DanLaiDanQu/releases/tag/windows-v0.2.2)
 - [Windows 构建与开发说明](Windows/README.md)
 
 ## 使用流程（两步）
