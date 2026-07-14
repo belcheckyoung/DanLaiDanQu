@@ -87,7 +87,7 @@ final class HistoryListView: NSScrollView, NSTableViewDataSource, NSTableViewDel
 
         let resume: String
         if let profile = Database.shared.loadSyncProfile(cid: entry.cid), profile.offset > 5 {
-            resume = "上次看到 \(mmss(profile.offset))"
+            resume = "上次看到 \(TimelineFormatter.string(from: profile.offset))"
         } else {
             resume = "\(entry.danmakuCount) 条弹幕"
         }
@@ -107,7 +107,4 @@ final class HistoryListView: NSScrollView, NSTableViewDataSource, NSTableViewDel
         return formatter.string(from: date)
     }
 
-    private func mmss(_ time: Double) -> String {
-        String(format: "%02d:%02d", Int(time) / 60, Int(time) % 60)
-    }
 }

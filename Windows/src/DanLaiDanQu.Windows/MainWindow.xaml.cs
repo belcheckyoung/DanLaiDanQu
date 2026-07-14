@@ -776,7 +776,7 @@ public partial class MainWindow : Window
             PlayButton.Content = playing ? "⏸ 暂停" : "▶ 播放";
         }
 
-        CurrentTimeText.Text = $"{(playing ? "▶" : "⏸")} {FormatTimeTenths(time)}";
+        CurrentTimeText.Text = $"{(playing ? "▶" : "⏸")} {FormatTime(time)}";
         DurationText.Text = $"{FormatTime(time)} / {FormatTime(duration)}";
         TimelineStateText.Text = $"{FormatTime(time)} / {FormatTime(duration)}";
         PlayStateText.Text = _countdownCancellation is not null ? PlayStateText.Text : playing ? "播放中" : "已暂停";
@@ -802,14 +802,7 @@ public partial class MainWindow : Window
 
     private static string FormatTime(double seconds)
     {
-        var safe = Math.Max(seconds, 0);
-        return $"{(int)safe / 60:00}:{(int)safe % 60:00}";
-    }
-
-    private static string FormatTimeTenths(double seconds)
-    {
-        var safe = Math.Max(seconds, 0);
-        return $"{(int)safe / 60:00}:{(int)safe % 60:00}.{(int)(safe * 10) % 10}";
+        return TimelineFormatter.Format(seconds);
     }
 
     private void Window_SourceInitialized(object? sender, EventArgs e)

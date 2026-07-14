@@ -252,7 +252,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
                 try await controller.loadLink(text)
                 if let page = controller.currentPage,
                    let p = Database.shared.loadSyncProfile(cid: page.cid), p.offset > 5 {
-                    statusLabel.stringValue = "弹幕加载完成，已恢复到上次位置 \(mmss(p.offset))"
+                    statusLabel.stringValue = "弹幕加载完成，已恢复到上次位置 \(TimelineFormatter.string(from: p.offset))"
                 } else {
                     statusLabel.stringValue = "弹幕加载完成"
                 }
@@ -625,14 +625,14 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
                 playing = false
                 t = duration
             }
-            let m = Int(t) / 60, s = Int(t) % 60, d = Int(t * 10) % 10
+            let formattedTime = TimelineFormatter.string(from: t)
             if self.controller.isCountingDown {
                 self.playbackPanel.setPlayButton(symbol: "xmark", title: "取消 \(self.controller.countdownRemaining)")
-                self.playbackPanel.setTimeDisplay(String(format: "⏳ %02d:%02d.%d", m, s, d))
+                self.playbackPanel.setTimeDisplay("⏳ \(formattedTime)")
             } else {
                 self.playbackPanel.setPlayButton(symbol: playing ? "pause.fill" : "play.fill",
                                                  title: playing ? "暂停" : "播放")
-                self.playbackPanel.setTimeDisplay(String(format: "%@ %02d:%02d.%d", playing ? "▶" : "⏸", m, s, d))
+                self.playbackPanel.setTimeDisplay("\(playing ? "▶" : "⏸") \(formattedTime)")
             }
             self.playbackPanel.updateProgress(currentTime: t, duration: duration, recentSeekAt: self.lastSeekAt)
             self.updatePlaybackStateLabels(currentTime: t)
@@ -666,9 +666,9 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         let duration = totalDuration()
         let timeline: String
         if duration > 0 {
-            timeline = "\(mmss(current)) / \(mmss(duration))"
+            timeline = "\(TimelineFormatter.string(from: current)) / \(TimelineFormatter.string(from: duration))"
         } else {
-            timeline = mmss(current)
+            timeline = TimelineFormatter.string(from: current)
         }
         playbackPanel.updateState(play: playState, overlay: overlayState,
                                   timeline: timeline, count: "\(controller.rawDanmaku.count) 条")
@@ -699,7 +699,4 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         return (cleaned.isEmpty ? "danmaku" : cleaned) + "." + ext
     }
 
-    private func mmss(_ t: Double) -> String {
-        String(format: "%02d:%02d", Int(t) / 60, Int(t) % 60)
-    }
 }

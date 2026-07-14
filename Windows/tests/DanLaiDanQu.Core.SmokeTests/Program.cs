@@ -28,6 +28,13 @@ Check(Math.Abs(clock.CurrentTime - 14.5) < 0.001, "paused clock should not progr
 clock.Seek(-5);
 Check(clock.CurrentTime == 0, "negative seek should clamp to zero");
 
+Check(TimelineFormatter.Format(29 * 60 + 39.8) == "29:39", "timeline should drop fractional seconds");
+Check(TimelineFormatter.Format(3_599.9) == "59:59", "sub-hour timeline formatting failed");
+Check(TimelineFormatter.Format(3_600) == "1:00:00", "one-hour timeline formatting failed");
+Check(TimelineFormatter.Format(2 * 3_600 + 30) == "2:00:30", "multi-hour timeline formatting failed");
+Check(TimelineFormatter.Format(-1) == "00:00" && TimelineFormatter.Format(double.PositiveInfinity) == "00:00",
+    "invalid timeline values should clamp to zero");
+
 var xml = "<?xml version=\"1.0\"?><i><d p=\"1.5,1,25,16777215,1,0,u,id,5\">hello &amp; world</d><d p=\"2,5,25,16711680,2,0,u,id2,3\">top</d></i>";
 var parsed = DanmakuParser.Parse(Encoding.UTF8.GetBytes(xml));
 Check(parsed.Count == 2, "XML parsing count failed");
@@ -94,5 +101,5 @@ if (failures.Count > 0)
     return 1;
 }
 
-Console.WriteLine("Windows core smoke tests passed (BiliLink, PlaybackClock, DanmakuParser, FilterEngine).");
+Console.WriteLine("Windows core smoke tests passed (BiliLink, PlaybackClock, TimelineFormatter, DanmakuParser, FilterEngine).");
 return 0;

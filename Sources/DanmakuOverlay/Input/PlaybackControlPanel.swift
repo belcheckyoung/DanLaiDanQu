@@ -21,7 +21,7 @@ final class PlaybackControlPanel: NSStackView {
     let syncButton = NSButton(title: "从 0 秒同步", target: nil, action: nil)
     let playButton = NSButton(title: "播放", target: nil, action: nil)
     let delaySwitch = NSSwitch()
-    let timeLabel = NSTextField(labelWithString: "00:00.0")
+    let timeLabel = NSTextField(labelWithString: "00:00")
     let durationLabel = NSTextField(labelWithString: "00:00 / 00:00")
     let offsetField = NSTextField()
     let statusLabel = NSTextField(labelWithString: "")
@@ -164,14 +164,13 @@ final class PlaybackControlPanel: NSStackView {
 
     func setDraggedTime(_ time: Double, playing: Bool, duration: Double) {
         let state = playing ? "▶" : "⏸"
-        timeLabel.stringValue = String(format: "%@ %02d:%02d.%d",
-                                       state, Int(time) / 60, Int(time) % 60, Int(time * 10) % 10)
-        durationLabel.stringValue = "\(Self.mmss(time)) / \(Self.mmss(duration))"
+        timeLabel.stringValue = "\(state) \(TimelineFormatter.string(from: time))"
+        durationLabel.stringValue = "\(TimelineFormatter.string(from: time)) / \(TimelineFormatter.string(from: duration))"
     }
 
     func updateProgress(currentTime: Double, duration: Double, recentSeekAt: Date) {
         progressSlider.isEnabled = duration > 0
-        durationLabel.stringValue = "\(Self.mmss(currentTime)) / \(Self.mmss(duration))"
+        durationLabel.stringValue = "\(TimelineFormatter.string(from: currentTime)) / \(TimelineFormatter.string(from: duration))"
         let dragging = (progressSlider.cell?.isHighlighted ?? false)
             || Date().timeIntervalSince(recentSeekAt) < 0.4
         if !dragging && duration > 0 {
@@ -187,7 +186,4 @@ final class PlaybackControlPanel: NSStackView {
         countStateLabel.stringValue = count
     }
 
-    private static func mmss(_ time: Double) -> String {
-        String(format: "%02d:%02d", Int(time) / 60, Int(time) % 60)
-    }
 }
