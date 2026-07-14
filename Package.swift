@@ -14,6 +14,10 @@ let package = Package(
                 .linkedFramework("Carbon"),
                 .linkedFramework("QuartzCore"),
             ]
-        )
+        ),
+        .testTarget(
+            name: "DanmakuOverlayTests",
+            dependencies: ["DanmakuOverlay"]
+        ),
     ]
 )

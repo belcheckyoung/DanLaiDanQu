@@ -20,7 +20,7 @@ final class DanmakuRenderView: NSView {
         var lastSpeed: CGFloat = 0
     }
 
-    let clock = PlaybackClock()
+    let clock: PlaybackClock
 
     private var allDanmaku: [Danmaku] = []      // 过滤后、按时间排序
     private var nextIndex = 0
@@ -35,8 +35,9 @@ final class DanmakuRenderView: NSView {
     private let fixedDuration: Double = 5.0
     private let settings = SettingsStore.shared
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
+    init(clock: PlaybackClock) {
+        self.clock = clock
+        super.init(frame: .zero)
         wantsLayer = true
         layer?.masksToBounds = true
     }

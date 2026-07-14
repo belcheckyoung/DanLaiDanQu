@@ -8,7 +8,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         if menuItem.action == #selector(togglePlay) || menuItem.action == #selector(syncNow) {
             return !controller.rawDanmaku.isEmpty
                 || controller.isCountingDown
-                || controller.clock?.isPlaying == true
+                || controller.clock.isPlaying
         }
         return true
     }
@@ -270,14 +270,14 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         if controller.isCountingDown {
             controller.cancelCountdown()
             statusLabel.stringValue = "已取消倒计时"
-        } else if controller.clock?.isPlaying == true {
+        } else if controller.clock.isPlaying {
             controller.pausePlayback()
         } else if settings.delayedStart {
             controller.startCountdown(thenSync: false)
             statusLabel.stringValue = "倒计时结束时弹幕继续播放——请在归零瞬间点击视频播放"
         } else {
             if controller.overlayWindow?.isVisible != true { controller.openOverlay() }
-            controller.clock?.play()
+            controller.clock.play()
         }
     }
 
@@ -298,7 +298,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         lastSeekAt = Date()
         let t = playbackPanel.progressValue
         controller.seek(to: t)
-        playbackPanel.setDraggedTime(t, playing: controller.clock?.isPlaying == true, duration: totalDuration())
+        playbackPanel.setDraggedTime(t, playing: controller.clock.isPlaying, duration: totalDuration())
     }
 
     @objc private func applyOffset() {
@@ -402,7 +402,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     /// 菜单打开时同步勾选状态
     func menuWillOpen(_ menu: NSMenu) {
         passthroughMenuItem?.state = settings.mousePassthrough ? .on : .off
-        let current = controller.clock?.rate ?? 1.0
+        let current = controller.clock.rate
         for item in rateMenuItems {
             item.state = (item.representedObject as? Double) == current ? .on : .off
         }
@@ -415,7 +415,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
     @objc private func togglePassthroughMenu() {
         settings.mousePassthrough.toggle()
         controller.overlayWindow?.mousePassthrough = settings.mousePassthrough
-        updatePlaybackStateLabels(currentTime: controller.clock?.currentTime ?? 0)
+        updatePlaybackStateLabels(currentTime: controller.clock.currentTime)
         syncWindowLevel()
     }
 
@@ -548,7 +548,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         metaLabel.isHidden = controller.videoInfo == nil
         let overlayVisible = controller.overlayWindow?.isVisible ?? false
         playbackPanel.setOverlayVisible(overlayVisible)
-        updatePlaybackStateLabels(currentTime: controller.clock?.currentTime ?? 0)
+        updatePlaybackStateLabels(currentTime: controller.clock.currentTime)
         syncWindowLevel()
         reloadHistory()
     }
@@ -557,10 +557,10 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         // 挂到 .common 模式：拖动滑块（鼠标追踪模式）期间时间显示才能持续刷新
         let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self else { return }
-            // 弹幕层未打开时 clock 为 nil，进度与时长仍需正常显示
+            // 时间轴独立于弹幕层，首次打开弹幕层之前也能正常拖动并保留位置
             let clock = self.controller.clock
-            let playing = clock?.isPlaying == true
-            let t = max(clock?.currentTime ?? 0, 0)
+            let playing = clock.isPlaying
+            let t = max(clock.currentTime, 0)
             let m = Int(t) / 60, s = Int(t) % 60, d = Int(t * 10) % 10
             if self.controller.isCountingDown {
                 self.playbackPanel.setPlayButton(symbol: "xmark", title: "取消 \(self.controller.countdownRemaining)")
@@ -585,7 +585,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         let playState: String
         if controller.isCountingDown {
             playState = "倒计时 \(controller.countdownRemaining)s"
-        } else if controller.clock?.isPlaying == true {
+        } else if controller.clock.isPlaying {
             playState = "播放中"
         } else {
             playState = controller.rawDanmaku.isEmpty ? "待加载" : "已暂停"

@@ -52,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleOverlay() { AppController.shared.toggleOverlay() }
-    @objc private func togglePlay() { AppController.shared.clock?.toggle() }
+    @objc private func togglePlay() { AppController.shared.clock.toggle() }
 
     // MARK: - 主菜单（保证 ⌘C/⌘V/⌘Q 可用）
 

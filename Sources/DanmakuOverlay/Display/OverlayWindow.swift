@@ -5,7 +5,7 @@ import AppKit
 /// - 可切换鼠标穿透；穿透关闭时可整窗拖动
 final class OverlayWindow: NSPanel {
 
-    let renderView = DanmakuRenderView()
+    let renderView: DanmakuRenderView
 
     /// 穿透开启时窗口完全不响应鼠标，点击直接落到下层播放器
     var mousePassthrough: Bool = true {
@@ -15,7 +15,8 @@ final class OverlayWindow: NSPanel {
         }
     }
 
-    init() {
+    init(clock: PlaybackClock) {
+        renderView = DanmakuRenderView(clock: clock)
         // 默认覆盖主屏上方 45% 区域
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let height = screen.height * 0.45

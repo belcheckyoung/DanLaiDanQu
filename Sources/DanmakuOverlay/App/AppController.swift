@@ -9,17 +9,20 @@ final class AppController {
     private(set) var rawDanmaku: [Danmaku] = []      // 未过滤原始数据
     private(set) var overlayWindow: OverlayWindow?
 
+    /// 时间轴属于应用状态，而不是弹幕窗口。这样首次打开弹幕层之前也能拖动进度条。
+    let clock: PlaybackClock
     let hotkeys = HotkeyManager()
     private let settings = SettingsStore.shared
 
     var onStateChange: (() -> Void)?   // 主窗口刷新回调
 
-    var clock: PlaybackClock? { overlayWindow?.renderView.clock }
-
-    private init() {
+    init(clock: PlaybackClock = PlaybackClock(), registerHotkeys: Bool = true) {
+        self.clock = clock
         hotkeys.handler = { [weak self] action in self?.handleHotkey(action) }
         settings.onChange = { [weak self] in self?.applyFilters() }
-        hotkeys.register()   // 启动即注册，⌘⇧H 可随时打开/关闭弹幕层
+        if registerHotkeys {
+            hotkeys.register()   // 启动即注册，⌘⇧H 可随时打开/关闭弹幕层
+        }
     }
 
     // MARK: - 加载流程
@@ -112,7 +115,7 @@ final class AppController {
         if let w = overlayWindow {
             window = w
         } else {
-            window = OverlayWindow()
+            window = OverlayWindow(clock: clock)
             overlayWindow = window
         }
         window.mousePassthrough = settings.mousePassthrough
@@ -120,14 +123,13 @@ final class AppController {
         window.orderFrontRegardless()
         window.renderView.startRendering()
         applyFilters()
-        restoreSyncProfile()
         hotkeys.register()
         onStateChange?()
     }
 
     /// 暂停并记录位置（历史记录「继续看」依赖这里的自动保存）
     func pausePlayback() {
-        clock?.pause()
+        clock.pause()
         saveSyncProfile()
         onStateChange?()
     }
@@ -152,7 +154,7 @@ final class AppController {
         cancelCountdown()
         // 播放意味着需要弹幕层，未打开时自动打开
         if overlayWindow?.isVisible != true { openOverlay() }
-        clock?.pause()
+        clock.pause()
         countdownRemaining = seconds
         overlayWindow?.renderView.showCountdown(countdownRemaining)
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
@@ -162,7 +164,7 @@ final class AppController {
                 self.countdownTimer?.invalidate()
                 self.countdownTimer = nil
                 self.overlayWindow?.renderView.showCountdown(nil)
-                if thenSync { self.syncFromNow() } else { self.clock?.play() }
+                if thenSync { self.syncFromNow() } else { self.clock.play() }
             } else {
                 self.overlayWindow?.renderView.showCountdown(self.countdownRemaining)
             }
@@ -184,39 +186,38 @@ final class AppController {
     // MARK: - 时间轴
 
     func syncFromNow() {
-        clock?.syncFromNow()
+        clock.syncFromNow()
         overlayWindow?.renderView.resync()
         onStateChange?()
     }
 
     /// 跳转到绝对时间并重建屏上弹幕（进度条拖动、快进后退共用）
     func seek(to time: Double) {
-        clock?.seek(to: time)
+        clock.seek(to: time)
         overlayWindow?.renderView.resync()
         onStateChange?()
     }
 
     func adjustTime(by delta: Double) {
-        guard let clock else { return }
         seek(to: clock.currentTime + delta)
     }
 
     func setRate(_ rate: Double) {
-        clock?.rate = rate
+        clock.rate = rate
         onStateChange?()
     }
 
     func saveSyncProfile() {
-        guard let page = currentPage, let clock else { return }
+        guard let page = currentPage else { return }
         Database.shared.saveSyncProfile(cid: page.cid, offset: clock.currentTime, rate: clock.rate)
     }
 
     private func restoreSyncProfile() {
-        guard let page = currentPage, let clock,
-              let profile = Database.shared.loadSyncProfile(cid: page.cid) else { return }
-        clock.rate = profile.rate
+        guard let page = currentPage else { return }
+        let profile = Database.shared.loadSyncProfile(cid: page.cid)
+        clock.rate = profile?.rate ?? 1.0
         // 钳制到时长内：曾保存过超出片尾的位置会导致时间轴停在结尾之后，弹幕永不出现
-        var offset = max(profile.offset, 0)
+        var offset = max(profile?.offset ?? 0, 0)
         if page.duration > 0 {
             offset = min(offset, Double(page.duration) - 1)
         }
@@ -229,7 +230,7 @@ final class AppController {
     private func handleHotkey(_ action: HotkeyManager.Action) {
         switch action {
         case .togglePlay:
-            if clock?.isPlaying == true { pausePlayback() } else { clock?.play() }
+            if clock.isPlaying { pausePlayback() } else { clock.play() }
         case .back1: adjustTime(by: -1)
         case .forward1: adjustTime(by: 1)
         case .forward5: adjustTime(by: 5)
