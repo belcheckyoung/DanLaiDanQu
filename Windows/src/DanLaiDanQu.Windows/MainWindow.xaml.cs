@@ -151,6 +151,7 @@ public partial class MainWindow : Window
         _rawDanmaku.Clear();
         _rawDanmaku.AddRange(danmaku);
         _currentPage = page;
+        _isDraggingProgress = false;
         ApplyFilters();
 
         _clock.Pause();
@@ -568,6 +569,7 @@ public partial class MainWindow : Window
 
             _videoInfo = info;
             _currentPage = page;
+            _isDraggingProgress = false;
             _rawDanmaku.Clear();
             _rawDanmaku.AddRange(items);
             ApplyFilters();

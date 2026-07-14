@@ -1,5 +1,19 @@
 import AppKit
 
+private final class TrackingSlider: NSSlider {
+    private(set) var isUserTracking = false
+
+    override func mouseDown(with event: NSEvent) {
+        isUserTracking = true
+        defer {
+            isUserTracking = false
+            cell?.isHighlighted = false
+            needsDisplay = true
+        }
+        super.mouseDown(with: event)
+    }
+}
+
 final class PlaybackControlPanel: NSStackView {
     struct Actions {
         let toggleOverlay: Selector
@@ -26,7 +40,7 @@ final class PlaybackControlPanel: NSStackView {
     let offsetField = NSTextField()
     let statusLabel = NSTextField(labelWithString: "")
 
-    private let progressSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
+    private let progressSlider = TrackingSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
     private let playStateLabel = NSTextField(labelWithString: "待机")
     private let overlayStateLabel = NSTextField(labelWithString: "弹幕层未打开")
     private let timelineStateLabel = NSTextField(labelWithString: "00:00")
@@ -169,14 +183,17 @@ final class PlaybackControlPanel: NSStackView {
     }
 
     func updateProgress(currentTime: Double, duration: Double, recentSeekAt: Date) {
-        progressSlider.isEnabled = duration > 0
         durationLabel.stringValue = "\(TimelineFormatter.string(from: currentTime)) / \(TimelineFormatter.string(from: duration))"
-        let dragging = (progressSlider.cell?.isHighlighted ?? false)
-            || Date().timeIntervalSince(recentSeekAt) < 0.4
-        if !dragging && duration > 0 {
-            progressSlider.maxValue = duration
-            progressSlider.doubleValue = min(currentTime, duration)
+        let dragging = progressSlider.isUserTracking || Date().timeIntervalSince(recentSeekAt) < 0.4
+        if !dragging {
+            updateProgressControl(currentTime: currentTime, duration: duration)
         }
+    }
+
+    /// 换集或换视频完成后无条件更新滑块，避免沿用上一内容的最大值和拇指位置。
+    func synchronizeProgress(currentTime: Double, duration: Double) {
+        durationLabel.stringValue = "\(TimelineFormatter.string(from: currentTime)) / \(TimelineFormatter.string(from: duration))"
+        updateProgressControl(currentTime: currentTime, duration: duration)
     }
 
     func updateState(play: String, overlay: String, timeline: String, count: String) {
@@ -184,6 +201,15 @@ final class PlaybackControlPanel: NSStackView {
         overlayStateLabel.stringValue = overlay
         timelineStateLabel.stringValue = timeline
         countStateLabel.stringValue = count
+    }
+
+    private func updateProgressControl(currentTime: Double, duration: Double) {
+        let safeDuration = duration.isFinite ? max(duration, 0) : 0
+        let safeTime = currentTime.isFinite ? max(currentTime, 0) : 0
+        progressSlider.isEnabled = safeDuration > 0
+        progressSlider.maxValue = max(safeDuration, 1)
+        progressSlider.doubleValue = safeDuration > 0 ? min(safeTime, safeDuration) : 0
+        progressSlider.needsDisplay = true
     }
 
 }

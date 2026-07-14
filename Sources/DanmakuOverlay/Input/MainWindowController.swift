@@ -38,6 +38,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
 
     // 同步区
     private var lastSeekAt = Date.distantPast
+    private var displayedPageCID: Int64?
 
     // 历史记录
     private let historyList = HistoryListView()
@@ -328,6 +329,7 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         guard let info = controller.videoInfo,
               pagePopup.indexOfSelectedItem < info.pages.count else { return }
         let page = info.pages[pagePopup.indexOfSelectedItem]
+        guard page.cid != controller.currentPage?.cid else { return }
         Task { @MainActor in
             do { try await controller.selectPage(page) }
             catch is CancellationError { refresh() }
@@ -604,6 +606,13 @@ final class MainWindowController: NSWindowController, NSMenuDelegate, NSMenuItem
         metaLabel.isHidden = controller.videoInfo == nil
         let overlayVisible = controller.overlayWindow?.isVisible ?? false
         playbackPanel.setOverlayVisible(overlayVisible)
+        let currentPageCID = controller.currentPage?.cid
+        if displayedPageCID != currentPageCID {
+            displayedPageCID = currentPageCID
+            lastSeekAt = .distantPast
+            playbackPanel.synchronizeProgress(currentTime: controller.clock.currentTime,
+                                               duration: totalDuration())
+        }
         updatePlaybackStateLabels(currentTime: controller.clock.currentTime)
         syncWindowLevel()
         reloadHistory()
