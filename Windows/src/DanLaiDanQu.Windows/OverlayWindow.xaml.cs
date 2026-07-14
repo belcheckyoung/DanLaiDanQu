@@ -33,6 +33,7 @@ public partial class OverlayWindow : Window
     private int _nextIndex;
     private DateTimeOffset? _clearUntil;
     private bool _clickThrough;
+    private bool _sourceInitialized;
 
     public OverlayWindow(PlaybackClock clock, AppSettings settings)
     {
@@ -53,7 +54,11 @@ public partial class OverlayWindow : Window
             Height = saved.Height;
         }
 
-        SourceInitialized += (_, _) => ApplyClickThrough();
+        SourceInitialized += (_, _) =>
+        {
+            _sourceInitialized = true;
+            ApplyClickThrough();
+        };
         SizeChanged += (_, _) => Resync();
         _timer = new DispatcherTimer(DispatcherPriority.Render)
         {
@@ -265,7 +270,7 @@ public partial class OverlayWindow : Window
 
     private void ApplyClickThrough()
     {
-        if (!IsSourceInitialized)
+        if (!_sourceInitialized)
         {
             return;
         }
