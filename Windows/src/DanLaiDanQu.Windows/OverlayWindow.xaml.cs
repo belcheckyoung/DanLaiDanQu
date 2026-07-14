@@ -7,6 +7,9 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using DanLaiDanQu.Core;
+using MediaColor = System.Windows.Media.Color;
+using MediaFontFamily = System.Windows.Media.FontFamily;
+using WpfSize = System.Windows.Size;
 
 namespace DanLaiDanQu.Windows;
 
@@ -193,10 +196,10 @@ public partial class OverlayWindow : Window
         var text = new TextBlock
         {
             Text = item.Text,
-            FontFamily = new FontFamily("Microsoft YaHei UI"),
+            FontFamily = new MediaFontFamily("Microsoft YaHei UI"),
             FontSize = _settings.FontSize,
             FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(
+            Foreground = new SolidColorBrush(MediaColor.FromRgb(
                 (byte)((item.Color >> 16) & 0xFF),
                 (byte)((item.Color >> 8) & 0xFF),
                 (byte)(item.Color & 0xFF))),
@@ -210,7 +213,7 @@ public partial class OverlayWindow : Window
             },
             IsHitTestVisible = false,
         };
-        text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        text.Measure(new WpfSize(double.PositiveInfinity, double.PositiveInfinity));
         var textWidth = Math.Max(text.DesiredSize.Width, 1);
         var lineHeight = Math.Max(_settings.FontSize * 1.35 + _settings.LaneSpacing, 24);
         var expire = item.Time + (item.Mode == DanmakuMode.Scroll ? Math.Max(_settings.ScrollDuration, 1) : 5);
